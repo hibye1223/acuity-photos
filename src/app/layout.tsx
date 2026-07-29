@@ -7,8 +7,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Lumos App",
-  description: "Built with create-lumos-app",
+  title: "Acuity Photos",
+  description:
+    "Acuity Photos helps people with overwhelming photo libraries use smart technology to effortlessly organize, clean, and rediscover their pictures.",
 };
 
 export default function RootLayout({

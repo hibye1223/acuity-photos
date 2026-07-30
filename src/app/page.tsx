@@ -49,6 +49,21 @@ const steps = [
   },
 ] as const;
 
+const trust = [
+  {
+    tag: "Confirmation",
+    title: "Asks before it acts",
+    description:
+      "Every batch is shown to you before anything is deleted — even in auto-clean mode, you get a summary first. Nothing is removed silently.",
+  },
+  {
+    tag: "Privacy",
+    title: "Your photos stay yours",
+    description:
+      "Photos are only processed to power detection — never used for training or shared with anyone. Nothing leaves your control without a review.",
+  },
+] as const;
+
 export default function Home() {
   return (
     <main className="flex flex-col">
@@ -124,6 +139,34 @@ export default function Home() {
                 {step.description}
               </p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="mx-auto max-w-3xl" />
+
+      <section className="mx-auto w-full max-w-3xl px-4 py-20">
+        <div className="mb-10 flex flex-col gap-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            You're always in control
+          </h2>
+          <p className="text-muted-foreground">
+            Nothing disappears without your say-so.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {trust.map((item) => (
+            <Card key={item.tag}>
+              <CardHeader>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {item.tag}
+                </span>
+                <CardTitle className="text-base">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{item.description}</CardDescription>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>

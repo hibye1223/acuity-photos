@@ -1,3 +1,4 @@
+import { ProductMoment } from "~/components/product-moment";
 import {
   Card,
   CardContent,
@@ -7,83 +8,57 @@ import {
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 
-const categories = [
-  {
-    tag: "Duplicates",
-    title: "Duplicates & near-duplicates",
-    description:
-      "Bursts and near-identical shots get grouped together, with the best one pre-selected — so you're reviewing one decision, not twelve photos.",
-  },
-  {
-    tag: "Junk",
-    title: "Screenshots & junk",
-    description:
-      "Screenshots, memes, and downloads are set apart from your real photos, so clearing clutter never risks a memory.",
-  },
-  {
-    tag: "Quality",
-    title: "Blurry & low-quality shots",
-    description:
-      "Out-of-focus and low-quality shots are flagged on their own, separate from anything that might still matter to you.",
-  },
-] as const;
-
 const steps = [
   {
     number: "01",
-    title: "Scan",
+    title: "Tell it what you want",
     description:
-      "Your library is reviewed for duplicates, junk, and blurry shots.",
+      'Say something like "build an album from the Tokyo trip." Acuity finds the right photos using time and location, no manual sorting through your camera roll.',
   },
   {
     number: "02",
-    title: "Review",
+    title: "Review what it proposes",
     description:
-      "Go through each suggestion with a clear reason attached — nothing removed silently.",
+      "It suggests an order and captions, and asks before it labels anyone it doesn't recognize. Nothing about your photos is decided without you.",
   },
   {
     number: "03",
-    title: "Relief",
+    title: "Keep, edit, or redo",
     description:
-      "Leave with a library that feels trustworthy again, not just smaller.",
+      "Swap a photo, rewrite a caption, or ask it to try again. The album isn't final until you say it is.",
   },
 ] as const;
 
-const trust = [
+const personal = [
   {
-    tag: "Confirmation",
-    title: "Asks before it acts",
+    tag: "Collaboration",
+    title: "The AI suggests. You decide.",
     description:
-      "Every batch is shown to you before anything is deleted — even in auto-clean mode, you get a summary first. Nothing is removed silently.",
+      "Every album, every caption, every face label is a suggestion until you approve it. Acuity never finishes something behind your back.",
   },
   {
-    tag: "Privacy",
-    title: "Your photos stay yours",
+    tag: "Personal",
+    title: "Captions that sound like you",
     description:
-      "Photos are only processed to power detection — never used for training or shared with anyone. Nothing leaves your control without a review.",
+      "Not generic AI phrasing. Acuity writes like someone who was actually there, and you can always rewrite anything yourself.",
   },
 ] as const;
 
 export default function Home() {
   return (
     <main className="flex flex-col">
-      <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center sm:py-32">
-        <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-          AI-first photo cleanup
-        </span>
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-          Acuity Photos
+      <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-4 py-16 text-center sm:py-24">
+        <h1 className="max-w-xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+          Finally, an album you'd actually share.
         </h1>
+
         <p className="max-w-xl text-balance text-lg text-muted-foreground">
-          Helps people with overwhelming photo libraries use smart technology to
-          effortlessly organize, clean, and rediscover their pictures.
+          Acuity turns years of forgotten photos into a finished album. It
+          suggests the order, the captions, and who's in each photo. You keep
+          the final say on everything.
         </p>
-        <a
-          href="#how-it-works"
-          className="text-sm font-medium underline underline-offset-4 text-foreground hover:text-muted-foreground"
-        >
-          See how it works
-        </a>
+
+        <ProductMoment className="w-full max-w-lg" />
       </section>
 
       <Separator className="mx-auto max-w-3xl" />
@@ -91,41 +66,10 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl px-4 py-20">
         <div className="mb-10 flex flex-col gap-2 text-center">
           <h2 className="text-2xl font-semibold tracking-tight">
-            What gets cleaned up first
-          </h2>
-          <p className="text-muted-foreground">
-            Three focused categories, reviewed one at a time.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {categories.map((category) => (
-            <Card key={category.tag}>
-              <CardHeader>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {category.tag}
-                </span>
-                <CardTitle className="text-base">{category.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{category.description}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <Separator className="mx-auto max-w-3xl" />
-
-      <section
-        id="how-it-works"
-        className="mx-auto w-full max-w-3xl px-4 py-20"
-      >
-        <div className="mb-10 flex flex-col gap-2 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">
             How it works
           </h2>
           <p className="text-muted-foreground">
-            Every suggestion comes with a reason — nothing is a black box.
+            You and Acuity, building the album together.
           </p>
         </div>
         <div className="grid gap-8 sm:grid-cols-3">
@@ -148,14 +92,12 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl px-4 py-20">
         <div className="mb-10 flex flex-col gap-2 text-center">
           <h2 className="text-2xl font-semibold tracking-tight">
-            You're always in control
+            Made with you, not for you
           </h2>
-          <p className="text-muted-foreground">
-            Nothing disappears without your say-so.
-          </p>
+          <p className="text-muted-foreground">Automatic, but never robotic.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {trust.map((item) => (
+          {personal.map((item) => (
             <Card key={item.tag}>
               <CardHeader>
                 <span className="text-xs font-medium text-muted-foreground">
@@ -167,6 +109,32 @@ export default function Home() {
                 <CardDescription>{item.description}</CardDescription>
               </CardContent>
             </Card>
+          ))}
+        </div>
+        <p className="mx-auto mt-8 max-w-lg text-center text-sm text-muted-foreground">
+          Your photos are only used to build your albums and catch duplicates,
+          never for training and never shared.
+        </p>
+      </section>
+
+      <Separator className="mx-auto max-w-3xl" />
+
+      <section className="mx-auto w-full max-w-3xl px-4 py-16 text-center">
+        <h2 className="text-lg font-semibold tracking-tight">
+          Need to declutter too? Acuity can help with that.
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+          Duplicates, screenshots, and blurry shots get grouped and flagged with
+          a clear reason, so clearing clutter never risks a memory.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {["Duplicates", "Screenshots & junk", "Blurry shots"].map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground"
+            >
+              {tag}
+            </span>
           ))}
         </div>
       </section>

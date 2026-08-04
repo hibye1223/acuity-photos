@@ -22,6 +22,15 @@ export async function Navbar() {
               <Button asChild variant="ghost" size="sm">
                 <Link href="/app">App</Link>
               </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/upload">Upload</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/photos">Gallery</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/albums">Albums</Link>
+              </Button>
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out

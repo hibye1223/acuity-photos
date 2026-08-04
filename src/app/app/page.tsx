@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signOut } from "~/app/actions/auth";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
@@ -13,10 +14,21 @@ export default async function AppHomePage() {
       <h1 className="text-2xl font-semibold tracking-tight">
         You're signed in
       </h1>
-      <p className="text-muted-foreground">
-        Signed in as {user?.email}. This is the foundation the Album Assistant
-        and Cleanup features will build on next.
-      </p>
+      <p className="text-muted-foreground">Signed in as {user?.email}.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link href="/app/albums/new">Build an album with AI</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/app/upload">Upload photos</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/app/photos">View gallery</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/app/albums">Your albums</Link>
+        </Button>
+      </div>
       <form action={signOut}>
         <Button type="submit" variant="outline">
           Sign out

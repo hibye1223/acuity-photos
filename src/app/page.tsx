@@ -32,9 +32,9 @@ const steps = [
 const personal = [
   {
     tag: "Collaboration",
-    title: "The AI suggests. You decide.",
+    title: "Built together, one photo at a time",
     description:
-      "Every album, every caption, every face label is a suggestion until you approve it. Acuity never finishes something behind your back.",
+      "Every album, every caption, every face label is something you and Acuity work through side by side. Nothing gets finished behind your back.",
   },
   {
     tag: "Personal",

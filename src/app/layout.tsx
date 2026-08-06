@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { FloatingWaitlistCta } from "~/components/floating-waitlist-cta";
+import { Footer } from "~/components/footer";
 import { Navbar } from "~/components/navbar";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
@@ -24,12 +25,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Navbar />
           {children}
-          <footer className="border-t border-border">
-            <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-8 text-sm text-muted-foreground">
-              <span>Acuity Photos</span>
-              <span>&copy; 2026</span>
-            </div>
-          </footer>
+          <Footer />
           <FloatingWaitlistCta />
         </ThemeProvider>
       </body>

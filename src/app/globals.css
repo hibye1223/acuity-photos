@@ -1,25 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  /* OKLCH Design Tokens — Light Mode Default (warm neutrals, terracotta, sage) */
-  --color-background: oklch(0.98 0.012 85);
-  --color-foreground: oklch(0.24 0.025 50);
-  --color-muted: oklch(0.945 0.016 75);
-  --color-muted-foreground: oklch(0.5 0.03 50);
-  --color-card: oklch(0.99 0.008 80);
-  --color-card-foreground: oklch(0.24 0.025 50);
-  --color-popover: oklch(0.99 0.008 80);
-  --color-popover-foreground: oklch(0.24 0.025 50);
-  --color-border: oklch(0.885 0.02 60);
-  --color-input: oklch(0.885 0.02 60);
-  --color-primary: oklch(0.56 0.145 40);
-  --color-primary-foreground: oklch(0.98 0.012 85);
-  --color-secondary: oklch(0.78 0.06 140);
-  --color-secondary-foreground: oklch(0.24 0.03 130);
-  --color-accent: oklch(0.92 0.03 70);
-  --color-accent-foreground: oklch(0.24 0.025 50);
-  --color-destructive: oklch(0.55 0.19 30);
-  --color-ring: oklch(0.56 0.145 40);
+  /* OKLCH Design Tokens — Light Mode (warm memory-focused palette: cream, walnut, sage) */
+  --color-background: oklch(0.977 0.01 82); /* #FBF7F0 */
+  --color-foreground: oklch(0.311 0.027 67); /* #3A2E22 */
+  --color-muted: oklch(0.93 0.016 75); /* soft warm neutral surface */
+  --color-muted-foreground: oklch(0.479 0.035 68); /* #6B5A48 secondary text */
+  --color-subtle-foreground: oklch(
+    0.656 0.031 77
+  ); /* #9C8F7C — decorative/large text only, ~3:1 */
+  --color-card: oklch(1 0 0); /* #FFFFFF */
+  --color-card-foreground: oklch(0.311 0.027 67); /* #3A2E22 */
+  --color-popover: oklch(1 0 0); /* #FFFFFF */
+  --color-popover-foreground: oklch(0.311 0.027 67); /* #3A2E22 */
+  --color-border: oklch(0.89 0.026 68); /* #E7D8C9 */
+  --color-input: oklch(0.89 0.026 68); /* #E7D8C9 */
+  --color-primary: oklch(0.453 0.059 132); /* #4A5D3A */
+  --color-primary-hover: oklch(0.387 0.05 133); /* #3A4A2E */
+  --color-primary-foreground: oklch(1 0 0); /* white — 7.2:1 on primary */
+  --color-secondary: oklch(
+    0.729 0.059 129
+  ); /* #9CAF88 accent green as secondary action color */
+  --color-secondary-foreground: oklch(
+    0.311 0.027 67
+  ); /* #3A2E22 — 5.6:1 on secondary */
+  --color-accent: oklch(
+    0.94 0.015 123
+  ); /* #E9EDE2 accent tint — subtle hover surface */
+  --color-accent-foreground: oklch(0.311 0.027 67); /* #3A2E22 */
+  --color-destructive: oklch(0.56 0.129 34); /* #B3543E */
+  --color-destructive-foreground: oklch(
+    1 0 0
+  ); /* white — 4.9:1 on destructive */
+  --color-warning: oklch(0.708 0.12 79); /* #C9973E */
+  --color-warning-foreground: oklch(
+    0.311 0.027 67
+  ); /* #3A2E22 — 5:1, white fails at 2.6:1 */
+  --color-success: oklch(0.543 0.079 134); /* #5C7A4A */
+  --color-success-foreground: oklch(1 0 0); /* white — 4.8:1 on success */
+  --color-ring: oklch(0.453 0.059 132); /* #4A5D3A */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
@@ -27,24 +46,41 @@
 }
 
 .dark {
-  --color-background: oklch(0.2 0.018 45);
-  --color-foreground: oklch(0.96 0.012 75);
-  --color-muted: oklch(0.28 0.02 45);
-  --color-muted-foreground: oklch(0.7 0.02 60);
-  --color-card: oklch(0.24 0.019 45);
-  --color-card-foreground: oklch(0.96 0.012 75);
-  --color-popover: oklch(0.24 0.019 45);
-  --color-popover-foreground: oklch(0.96 0.012 75);
-  --color-border: oklch(0.32 0.02 45);
-  --color-input: oklch(0.32 0.02 45);
-  --color-primary: oklch(0.66 0.15 40);
-  --color-primary-foreground: oklch(0.16 0.02 40);
-  --color-secondary: oklch(0.36 0.045 135);
-  --color-secondary-foreground: oklch(0.96 0.012 75);
-  --color-accent: oklch(0.33 0.03 60);
-  --color-accent-foreground: oklch(0.96 0.012 75);
-  --color-destructive: oklch(0.46 0.17 25);
-  --color-ring: oklch(0.66 0.15 40);
+  --color-background: oklch(0.242 0.015 124); /* #1E2119 */
+  --color-foreground: oklch(0.945 0.016 83); /* #F2ECE1 */
+  --color-muted: oklch(0.3 0.018 124); /* soft warm-dark neutral surface */
+  --color-muted-foreground: oklch(0.815 0.026 89); /* #C9C2B0 secondary text */
+  --color-subtle-foreground: oklch(
+    0.645 0.023 122
+  ); /* #8B9081 — decorative/large text only, ~5:1 */
+  --color-card: oklch(0.286 0.019 125); /* #282C22 */
+  --color-card-foreground: oklch(0.945 0.016 83); /* #F2ECE1 */
+  --color-popover: oklch(0.286 0.019 125); /* #282C22 */
+  --color-popover-foreground: oklch(0.945 0.016 83); /* #F2ECE1 */
+  --color-border: oklch(0.359 0.023 125); /* #3A3F32 */
+  --color-input: oklch(0.359 0.023 125); /* #3A3F32 */
+  --color-primary: oklch(0.729 0.059 129); /* #9CAF88 */
+  --color-primary-hover: oklch(0.792 0.052 127); /* #B2C29E */
+  --color-primary-foreground: oklch(
+    0.242 0.015 124
+  ); /* #1E2119 — white text fails at 2.4:1 on this primary */
+  --color-secondary: oklch(0.631 0.066 131); /* #7C9268 */
+  --color-secondary-foreground: oklch(
+    0.242 0.015 124
+  ); /* #1E2119 — 4.8:1 on secondary */
+  --color-accent: oklch(
+    0.318 0.026 129
+  ); /* #2E3527 accent tint — subtle hover surface */
+  --color-accent-foreground: oklch(0.945 0.016 83); /* #F2ECE1 */
+  --color-destructive: oklch(0.672 0.131 39); /* #D97757 */
+  --color-destructive-foreground: oklch(
+    0.242 0.015 124
+  ); /* #1E2119 — white fails at 3.1:1, dark passes at 5.2:1 */
+  --color-warning: oklch(0.761 0.114 78); /* #D9A857 */
+  --color-warning-foreground: oklch(0.242 0.015 124); /* #1E2119 — 7.5:1 */
+  --color-success: oklch(0.71 0.091 132); /* #8CAE72 */
+  --color-success-foreground: oklch(0.242 0.015 124); /* #1E2119 — 6.5:1 */
+  --color-ring: oklch(0.729 0.059 129); /* #9CAF88 */
 }
 
 @layer base {

@@ -16,7 +16,7 @@ export default async function AppHomePage() {
       </h1>
       <p className="text-muted-foreground">Signed in as {user?.email}.</p>
       <div className="flex flex-wrap gap-2">
-        <Button asChild>
+        <Button asChild data-tour="ai-assistant">
           <Link href="/app/albums/new">Build an album with AI</Link>
         </Button>
         <Button asChild variant="outline">

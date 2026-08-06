@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { FloatingWaitlistCta } from "~/components/floating-waitlist-cta";
 import { Footer } from "~/components/footer";
 import { Navbar } from "~/components/navbar";
 import { ThemeProvider } from "./theme-provider";
@@ -26,7 +25,6 @@ export default function RootLayout({
           <Navbar />
           {children}
           <Footer />
-          <FloatingWaitlistCta />
         </ThemeProvider>
       </body>
     </html>

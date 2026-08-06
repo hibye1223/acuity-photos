@@ -38,9 +38,14 @@ export async function Navbar() {
               </form>
             </>
           ) : (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Sign in</Link>
-            </Button>
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/login">Sign in</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/signup">Sign up</Link>
+              </Button>
+            </>
           )}
           <ThemeToggle />
         </div>

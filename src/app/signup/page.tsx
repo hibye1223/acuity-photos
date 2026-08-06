@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { LoginForm } from "~/components/auth/login-form";
+import { SignupForm } from "~/components/auth/signup-form";
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/card";
 import { createClient } from "~/lib/supabase/server";
 
-export default async function LoginPage({
+export default async function SignupPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string }>;
@@ -29,13 +29,13 @@ export default async function LoginPage({
     <main className="mx-auto flex w-full max-w-sm flex-col justify-center px-4 py-24">
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Sign in to Acuity</CardTitle>
+          <CardTitle className="text-xl">Create your account</CardTitle>
           <CardDescription>
-            Sign in with your email and password, or use a magic link.
+            Sign up with your email and a password.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginForm next={next} />
+          <SignupForm next={next} />
         </CardContent>
       </Card>
     </main>

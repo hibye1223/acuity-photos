@@ -1,5 +1,5 @@
+import { Mail } from "lucide-react";
 import Link from "next/link";
-import { SupportContact } from "~/components/support-contact";
 
 export function Footer() {
   return (
@@ -9,11 +9,11 @@ export function Footer() {
         <nav className="flex items-center gap-4">
           <Link
             href="/help"
-            className="underline-offset-4 hover:text-foreground hover:underline"
+            className="inline-flex items-center gap-1.5 underline-offset-4 hover:text-foreground hover:underline"
           >
+            <Mail className="size-3.5" />
             Help
           </Link>
-          <SupportContact />
         </nav>
         <span>&copy; 2026</span>
       </div>

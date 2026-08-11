@@ -24,7 +24,9 @@ export default function HelpPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Help & FAQ</h1>
         <p className="text-muted-foreground">
-          Can't find what you're looking for? <SupportContact />.
+          Can't find what you're looking for? Email us at{" "}
+          <SupportContact label="acuityphotoshelp@gmail.com" /> and we'll get
+          back to you.
         </p>
       </div>
 

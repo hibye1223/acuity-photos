@@ -10,6 +10,14 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
@@ -22,15 +30,20 @@ export async function Navbar() {
               <Button asChild variant="ghost" size="sm">
                 <Link href="/app">App</Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="sm" data-tour="upload">
                 <Link href="/app/upload">Upload</Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="sm" data-tour="gallery">
                 <Link href="/app/photos">Gallery</Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="sm" data-tour="albums">
                 <Link href="/app/albums">Albums</Link>
               </Button>
+              {profile?.is_admin ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/app/admin">Admin</Link>
+                </Button>
+              ) : null}
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out

@@ -1,9 +1,9 @@
 import { cn } from "~/lib/utils";
 
-const SUPPORT_EMAIL = "hello@acuityphotos.com";
+const SUPPORT_EMAIL = "acuityphotoshelp@gmail.com";
 
 export function SupportContact({
-  label = "Email us for help",
+  label = "Email us",
   className,
 }: {
   label?: string;

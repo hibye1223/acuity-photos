@@ -1,5 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
+import type { GalleryPhoto } from "~/components/photos/photo-grid";
+import { PhotoGrid } from "~/components/photos/photo-grid";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
 
@@ -54,32 +55,16 @@ export default async function PhotosPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {photos.map((photo) => {
-            const url = urlByPath.get(photo.storage_path);
-            const date = photo.taken_at ?? photo.created_at;
-
-            return (
-              <figure
-                key={photo.id}
-                className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
-              >
-                {url ? (
-                  <Image
-                    src={url}
-                    alt={photo.file_name}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : null}
-                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  {new Date(date).toLocaleDateString()}
-                </figcaption>
-              </figure>
-            );
-          })}
-        </div>
+        <PhotoGrid
+          photos={photos
+            .map((photo) => ({
+              id: photo.id,
+              url: urlByPath.get(photo.storage_path),
+              fileName: photo.file_name,
+              date: photo.taken_at ?? photo.created_at,
+            }))
+            .filter((photo): photo is GalleryPhoto => photo.url !== undefined)}
+        />
       )}
     </main>
   );

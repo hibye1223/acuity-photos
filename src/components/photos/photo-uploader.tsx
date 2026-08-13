@@ -93,6 +93,7 @@ export function PhotoUploader() {
           fileName: item.file.name,
           contentType: compressedFile.type || item.file.type,
           takenAt: capturedAt ? capturedAt.toISOString() : null,
+          sizeBytes: compressedFile.size,
         });
 
         updateItem(item.id, { status: "done", progress: 100 });

@@ -3,8 +3,17 @@ import { AlbumAssistant } from "~/components/albums/album-assistant";
 import { PhotoUploader } from "~/components/photos/photo-uploader";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import {
+  formatBytes,
+  getUsedStorageBytes,
+  MAX_STORAGE_BYTES,
+} from "~/lib/storage-quota";
+import { createClient } from "~/lib/supabase/server";
 
-export default function CreatePage() {
+export default async function CreatePage() {
+  const supabase = await createClient();
+  const usedBytes = await getUsedStorageBytes(supabase);
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-4 py-16">
       <div className="flex items-center justify-between gap-4">
@@ -47,6 +56,9 @@ export default function CreatePage() {
           <p className="text-sm text-muted-foreground">
             Drag and drop or browse to add photos. They're compressed and stored
             securely in your own private library.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatBytes(usedBytes)} of {formatBytes(MAX_STORAGE_BYTES)} used
           </p>
         </div>
         <PhotoUploader />

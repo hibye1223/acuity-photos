@@ -4,6 +4,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { generatePhotoTags } from "~/lib/ai/photo-tagging";
+import {
+  formatBytes,
+  getUsedStorageBytes,
+  MAX_STORAGE_BYTES,
+} from "~/lib/storage-quota";
 import { createClient } from "~/lib/supabase/server";
 
 const TAGGING_SIGNED_URL_TTL_SECONDS = 60 * 5;
@@ -13,11 +18,13 @@ export async function createPhotoRecord({
   fileName,
   contentType,
   takenAt,
+  sizeBytes,
 }: {
   storagePath: string;
   fileName: string;
   contentType: string;
   takenAt: string | null;
+  sizeBytes: number;
 }) {
   const supabase = await createClient();
   const {
@@ -32,6 +39,17 @@ export async function createPhotoRecord({
     throw new Error("Invalid storage path.");
   }
 
+  const usedBytes = await getUsedStorageBytes(supabase);
+  if (usedBytes + sizeBytes > MAX_STORAGE_BYTES) {
+    // The file is already uploaded by the time this action runs (the
+    // client uploads to Storage first, then records the row) — remove it
+    // rather than leaving an orphaned object that counts toward nothing.
+    await supabase.storage.from("photos").remove([storagePath]);
+    throw new Error(
+      `That would put you over your ${formatBytes(MAX_STORAGE_BYTES)} storage limit. Delete some photos first, or upload something smaller.`,
+    );
+  }
+
   const { data: photo, error } = await supabase
     .from("photos")
     .insert({
@@ -40,6 +58,7 @@ export async function createPhotoRecord({
       file_name: fileName,
       content_type: contentType,
       taken_at: takenAt,
+      size_bytes: sizeBytes,
     })
     .select("id")
     .single();

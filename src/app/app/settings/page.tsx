@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DeleteAccountButton } from "~/components/account/delete-account-button";
+import { ProfileForm } from "~/components/account/profile-form";
 import {
   Card,
   CardContent,
@@ -19,6 +20,12 @@ export default async function SettingsPage() {
     redirect("/login?next=/app/settings");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .single();
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-16">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
@@ -28,6 +35,13 @@ export default async function SettingsPage() {
           <CardTitle className="text-base">Account</CardTitle>
           <CardDescription>Signed in as {user.email}.</CardDescription>
         </CardHeader>
+        <CardContent>
+          <ProfileForm
+            userId={user.id}
+            initialFullName={profile?.full_name ?? null}
+            initialAvatarUrl={profile?.avatar_url ?? null}
+          />
+        </CardContent>
       </Card>
 
       <Card className="border-destructive/40">

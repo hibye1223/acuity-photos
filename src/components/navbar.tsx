@@ -44,6 +44,9 @@ export async function Navbar() {
                   <Link href="/app/admin">Admin</Link>
                 </Button>
               ) : null}
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/settings">Settings</Link>
+              </Button>
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out

@@ -6,7 +6,9 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
-    // Server-only Supabase vars can go here if needed
+    // Bypasses RLS entirely — only ever used server-side, for the admin
+    // deleteUser call behind self-service account deletion.
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
     AI_GATEWAY_API_KEY: z.string().min(1).optional(),
     ALBUM_ASSISTANT_MODEL: z
       .string()
@@ -31,6 +33,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
     ALBUM_ASSISTANT_MODEL: process.env.ALBUM_ASSISTANT_MODEL,
     PHOTO_TAGGING_MODEL: process.env.PHOTO_TAGGING_MODEL,

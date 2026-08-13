@@ -5,14 +5,17 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import {
   formatBytes,
+  getStorageLimitBytes,
   getUsedStorageBytes,
-  MAX_STORAGE_BYTES,
 } from "~/lib/storage-quota";
 import { createClient } from "~/lib/supabase/server";
 
 export default async function CreatePage() {
   const supabase = await createClient();
-  const usedBytes = await getUsedStorageBytes(supabase);
+  const [usedBytes, limitBytes] = await Promise.all([
+    getUsedStorageBytes(supabase),
+    getStorageLimitBytes(supabase),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-4 py-16">
@@ -58,7 +61,7 @@ export default async function CreatePage() {
             securely in your own private library.
           </p>
           <p className="text-xs text-muted-foreground">
-            {formatBytes(usedBytes)} of {formatBytes(MAX_STORAGE_BYTES)} used
+            {formatBytes(usedBytes)} of {formatBytes(limitBytes)} used
           </p>
         </div>
         <PhotoUploader />

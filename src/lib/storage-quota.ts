@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const MAX_STORAGE_BYTES = 1024 * 1024 * 1024; // 1 GB per user
+export const MAX_STORAGE_BYTES = 1024 * 1024 * 1024; // 1 GB per user, unless an admin overrides it
 
 /** Relies on RLS to scope rows to the signed-in user — never filter by user_id here. */
 export async function getUsedStorageBytes(
@@ -11,6 +11,24 @@ export async function getUsedStorageBytes(
   if (error) throw new Error(error.message);
 
   return (data ?? []).reduce((sum, row) => sum + (row.size_bytes ?? 0), 0);
+}
+
+/** The signed-in user's quota: their admin-set override, or the default. */
+export async function getStorageLimitBytes(
+  supabase: SupabaseClient,
+): Promise<number> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return MAX_STORAGE_BYTES;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("storage_quota_bytes")
+    .eq("id", user.id)
+    .single();
+
+  return data?.storage_quota_bytes ?? MAX_STORAGE_BYTES;
 }
 
 export function formatBytes(bytes: number): string {

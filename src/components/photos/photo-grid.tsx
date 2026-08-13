@@ -3,6 +3,13 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { cn } from "~/lib/utils";
 
 export type GalleryPhoto = {
@@ -12,29 +19,27 @@ export type GalleryPhoto = {
   date: string;
 };
 
-type PhotoGroup = { label: string; photos: GalleryPhoto[] };
+type SortOption = "newest" | "oldest" | "name";
 
-function groupByMonth(photos: GalleryPhoto[]): PhotoGroup[] {
-  const groups: PhotoGroup[] = [];
+const SORTERS: Record<
+  SortOption,
+  (a: GalleryPhoto, b: GalleryPhoto) => number
+> = {
+  newest: (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  oldest: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  name: (a, b) => a.fileName.localeCompare(b.fileName),
+};
 
-  for (const photo of photos) {
-    const label = new Date(photo.date).toLocaleDateString(undefined, {
-      month: "long",
-      year: "numeric",
-    });
-    const lastGroup = groups.at(-1);
-    if (lastGroup?.label === label) {
-      lastGroup.photos.push(photo);
-    } else {
-      groups.push({ label, photos: [photo] });
-    }
-  }
-
-  return groups;
-}
-
-export function PhotoGrid({ photos }: { photos: GalleryPhoto[] }) {
-  const groups = useMemo(() => groupByMonth(photos), [photos]);
+export function PhotoGrid({
+  photos: unsortedPhotos,
+}: {
+  photos: GalleryPhoto[];
+}) {
+  const [sort, setSort] = useState<SortOption>("newest");
+  const photos = useMemo(
+    () => [...unsortedPhotos].sort(SORTERS[sort]),
+    [unsortedPhotos, sort],
+  );
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const close = () => setOpenIndex(null);
@@ -67,39 +72,44 @@ export function PhotoGrid({ photos }: { photos: GalleryPhoto[] }) {
   const active = openIndex !== null ? photos[openIndex] : null;
 
   return (
-    <div className="flex flex-col gap-8">
-      {groups.map((group) => (
-        <section key={group.label} className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            {group.label}
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {group.photos.map((photo) => {
-              const index = photos.indexOf(photo);
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as SortOption)}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-              return (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => setOpenIndex(index)}
-                  className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted text-left"
-                >
-                  <Image
-                    src={photo.url}
-                    alt={photo.fileName}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    {new Date(photo.date).toLocaleDateString()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        {photos.map((photo, index) => (
+          <button
+            key={photo.id}
+            type="button"
+            onClick={() => setOpenIndex(index)}
+            className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted text-left"
+          >
+            <Image
+              src={photo.url}
+              alt={photo.fileName}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              {new Date(photo.date).toLocaleDateString()}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {active ? (
         <div

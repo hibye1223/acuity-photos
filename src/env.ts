@@ -12,7 +12,12 @@ export const env = createEnv({
       .string()
       .min(1)
       .default("anthropic/claude-sonnet-5"),
-    PHOTO_TAGGING_MODEL: z.string().min(1).default("openai/gpt-4o-mini"),
+    // Deliberately a different provider than ALBUM_ASSISTANT_MODEL so photo
+    // tagging and album generation don't share a rate-limit bucket.
+    PHOTO_TAGGING_MODEL: z
+      .string()
+      .min(1)
+      .default("google/gemini-2.5-flash-lite"),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),

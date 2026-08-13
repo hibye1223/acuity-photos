@@ -34,7 +34,7 @@ export default async function AdminPage() {
     .single();
 
   if (!profile?.is_admin) {
-    redirect("/app");
+    redirect("/app/create");
   }
 
   const [{ data: profiles, error }, { data: photos }, { data: albums }] =

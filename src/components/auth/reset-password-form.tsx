@@ -37,7 +37,7 @@ export function ResetPasswordForm() {
       return;
     }
 
-    router.push("/app");
+    router.push("/app/create");
     router.refresh();
   }
 

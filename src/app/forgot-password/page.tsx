@@ -16,7 +16,7 @@ export default async function ForgotPasswordPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/app");
+    redirect("/app/create");
   }
 
   return (

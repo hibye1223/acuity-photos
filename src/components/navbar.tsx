@@ -28,10 +28,7 @@ export async function Navbar() {
           {user ? (
             <>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/app">App</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm" data-tour="upload">
-                <Link href="/app/upload">Upload</Link>
+                <Link href="/app/create">Create</Link>
               </Button>
               <Button asChild variant="ghost" size="sm" data-tour="gallery">
                 <Link href="/app/photos">Gallery</Link>

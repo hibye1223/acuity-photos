@@ -50,7 +50,7 @@ export function LoginForm({ next }: { next?: string }) {
     }
 
     setStatus("redirecting");
-    router.push(next ?? "/app");
+    router.push(next ?? "/app/create");
     router.refresh();
   }
 

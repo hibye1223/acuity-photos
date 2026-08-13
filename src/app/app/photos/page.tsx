@@ -38,7 +38,7 @@ export default async function PhotosPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/app/upload">Upload photos</Link>
+          <Link href="/app/create">Upload photos</Link>
         </Button>
       </div>
 
@@ -50,7 +50,7 @@ export default async function PhotosPage() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
           <p className="text-muted-foreground">No photos yet.</p>
           <Button asChild variant="outline">
-            <Link href="/app/upload">Upload your first photo</Link>
+            <Link href="/app/create">Upload your first photo</Link>
           </Button>
         </div>
       ) : (

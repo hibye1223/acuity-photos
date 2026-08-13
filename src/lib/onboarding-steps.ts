@@ -15,14 +15,14 @@ export type OnboardingStep = {
 export const onboardingSteps: OnboardingStep[] = [
   {
     id: "welcome",
-    path: "/app",
+    path: "/app/create",
     title: "Welcome to Acuity Photos",
     description:
       "Here's a quick look at what you can do. Takes about 30 seconds.",
   },
   {
     id: "ai-assistant",
-    path: "/app",
+    path: "/app/create",
     target: "ai-assistant",
     title: "Build an album with AI",
     description:
@@ -30,7 +30,7 @@ export const onboardingSteps: OnboardingStep[] = [
   },
   {
     id: "upload",
-    path: "/app/upload",
+    path: "/app/create",
     target: "upload",
     title: "Upload your photos",
     description: "Bring your photos in so they're ready to organize.",

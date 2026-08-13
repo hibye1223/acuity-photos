@@ -7,7 +7,7 @@ import type {
   PickerPhoto,
 } from "~/app/actions/album-assistant";
 import { listPhotosForPickerAction } from "~/app/actions/album-assistant";
-import { saveAlbumAction } from "~/app/actions/albums";
+import { saveAlbumAction, updateAlbumAction } from "~/app/actions/albums";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -15,13 +15,20 @@ import { Textarea } from "~/components/ui/textarea";
 import { cn } from "~/lib/utils";
 
 export function AlbumDraftEditor({
+  albumId,
   initialTitle,
   initialPhotos,
   onDiscard,
+  discardLabel = "Discard draft",
+  saveLabel = "Save album",
 }: {
+  /** When set, edits and replaces an existing album instead of creating one. */
+  albumId?: string;
   initialTitle: string;
   initialPhotos: AlbumDraftPhoto[];
   onDiscard: () => void;
+  discardLabel?: string;
+  saveLabel?: string;
 }) {
   const [title, setTitle] = useState(initialTitle);
   const [photos, setPhotos] = useState(initialPhotos);
@@ -103,13 +110,20 @@ export function AlbumDraftEditor({
     }
     startSaving(async () => {
       try {
-        await saveAlbumAction({
-          title: trimmedTitle,
-          photos: photos.map((photo) => ({
-            photoId: photo.photoId,
-            caption: photo.caption,
-          })),
-        });
+        const photosInput = photos.map((photo) => ({
+          photoId: photo.photoId,
+          caption: photo.caption,
+        }));
+
+        if (albumId) {
+          await updateAlbumAction({
+            albumId,
+            title: trimmedTitle,
+            photos: photosInput,
+          });
+        } else {
+          await saveAlbumAction({ title: trimmedTitle, photos: photosInput });
+        }
       } catch (error) {
         // A successful save redirects (which throws internally) and never
         // reaches here — only real failures do.
@@ -287,7 +301,7 @@ export function AlbumDraftEditor({
               Saving…
             </>
           ) : (
-            "Save album"
+            saveLabel
           )}
         </Button>
         <Button
@@ -296,7 +310,7 @@ export function AlbumDraftEditor({
           onClick={onDiscard}
           disabled={isSaving}
         >
-          Discard draft
+          {discardLabel}
         </Button>
       </div>
     </div>

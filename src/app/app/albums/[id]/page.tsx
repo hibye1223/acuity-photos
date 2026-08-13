@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DeleteAlbumButton } from "~/components/albums/delete-album-button";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
 
@@ -46,9 +47,15 @@ export default async function AlbumDetailPage({
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-16">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">{album.title}</h1>
-        <Button asChild variant="outline">
-          <Link href="/app/albums">Your albums</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/app/albums">Your albums</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/app/albums/${album.id}/edit`}>Edit</Link>
+          </Button>
+          <DeleteAlbumButton albumId={album.id} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-6">

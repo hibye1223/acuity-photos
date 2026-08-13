@@ -2,8 +2,8 @@
 
 import { Check, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { deletePhotos } from "~/app/actions/photos";
 import {
   AlertDialog,
@@ -33,32 +33,34 @@ export type GalleryPhoto = {
   date: string;
 };
 
-type SortOption = "newest" | "oldest" | "name";
-
-const SORTERS: Record<
-  SortOption,
-  (a: GalleryPhoto, b: GalleryPhoto) => number
-> = {
-  newest: (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  oldest: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  name: (a, b) => a.fileName.localeCompare(b.fileName),
-};
+export type SortOption = "newest" | "oldest" | "name";
 
 export function PhotoGrid({
-  photos: unsortedPhotos,
+  photos,
+  sort,
+  page,
+  totalPages,
 }: {
   photos: GalleryPhoto[];
+  sort: SortOption;
+  page: number;
+  totalPages: number;
 }) {
   const router = useRouter();
-  const [sort, setSort] = useState<SortOption>("newest");
-  const photos = useMemo(
-    () => [...unsortedPhotos].sort(SORTERS[sort]),
-    [unsortedPhotos, sort],
-  );
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+
+  function navigate(next: { sort?: SortOption; page?: number }) {
+    const params = new URLSearchParams(searchParams);
+    if (next.sort) params.set("sort", next.sort);
+    if (next.page) params.set("page", String(next.page));
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   const close = () => setOpenIndex(null);
   const showPrev = () =>
@@ -191,7 +193,9 @@ export function PhotoGrid({
 
           <Select
             value={sort}
-            onValueChange={(value) => setSort(value as SortOption)}
+            onValueChange={(value) =>
+              navigate({ sort: value as SortOption, page: 1 })
+            }
           >
             <SelectTrigger className="w-44">
               <SelectValue />
@@ -250,6 +254,30 @@ export function PhotoGrid({
           );
         })}
       </div>
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => navigate({ page: page - 1 })}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => navigate({ page: page + 1 })}
+          >
+            Next
+          </Button>
+        </div>
+      ) : null}
 
       {active ? (
         <div

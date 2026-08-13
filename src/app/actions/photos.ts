@@ -55,6 +55,56 @@ export async function createPhotoRecord({
   after(() => tagPhotoContent(supabase, photo.id, storagePath));
 }
 
+export async function deletePhotos(photoIds: string[]) {
+  if (photoIds.length === 0) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to delete photos.");
+  }
+
+  // RLS already scopes this to the signed-in user's own rows, but selecting
+  // first (rather than trusting the client-supplied ids) confirms exactly
+  // which storage objects to remove.
+  const { data: photos, error: selectError } = await supabase
+    .from("photos")
+    .select("id, storage_path")
+    .in("id", photoIds);
+
+  if (selectError) {
+    throw new Error(selectError.message);
+  }
+
+  if (!photos || photos.length === 0) return;
+
+  const { error: storageError } = await supabase.storage
+    .from("photos")
+    .remove(photos.map((photo) => photo.storage_path));
+
+  if (storageError) {
+    throw new Error(storageError.message);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("photos")
+    .delete()
+    .in(
+      "id",
+      photos.map((photo) => photo.id),
+    );
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  revalidatePath("/app/photos");
+  revalidatePath("/app/albums");
+}
+
 async function tagPhotoContent(
   supabase: SupabaseClient,
   photoId: string,

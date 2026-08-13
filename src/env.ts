@@ -12,6 +12,7 @@ export const env = createEnv({
       .string()
       .min(1)
       .default("anthropic/claude-sonnet-5"),
+    PHOTO_TAGGING_MODEL: z.string().min(1).default("openai/gpt-4o-mini"),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -23,6 +24,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
     ALBUM_ASSISTANT_MODEL: process.env.ALBUM_ASSISTANT_MODEL,
+    PHOTO_TAGGING_MODEL: process.env.PHOTO_TAGGING_MODEL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

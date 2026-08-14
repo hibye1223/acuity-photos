@@ -77,3 +77,106 @@ export async function saveAlbumAction(input: SaveAlbumInput) {
   revalidatePath("/app/albums");
   redirect(`/app/albums/${album.id}`);
 }
+
+const updateAlbumSchema = z.object({
+  albumId: z.string().uuid(),
+  title: z.string().trim().min(1, "Give the album a title.").max(120),
+  photos: z
+    .array(
+      z.object({
+        photoId: z.string().uuid(),
+        caption: z.string().trim().max(240),
+      }),
+    )
+    .min(1, "Add at least one photo."),
+});
+
+export type UpdateAlbumInput = z.infer<typeof updateAlbumSchema>;
+
+/**
+ * Replaces a saved album's title and photos wholesale, per the schema's
+ * design (see 20260803000200_create_albums.sql: "album photo rows are
+ * replaced wholesale on save rather than edited in place").
+ */
+export async function updateAlbumAction(input: UpdateAlbumInput) {
+  const parsed = updateAlbumSchema.parse(input);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to edit an album.");
+  }
+
+  const { data: album, error: albumError } = await supabase
+    .from("albums")
+    .select("id")
+    .eq("id", parsed.albumId)
+    .maybeSingle();
+
+  if (albumError) throw new Error(albumError.message);
+  if (!album) throw new Error("That album no longer exists.");
+
+  const photoIds = parsed.photos.map((photo) => photo.photoId);
+  const { data: ownedPhotos, error: ownedError } = await supabase
+    .from("photos")
+    .select("id")
+    .in("id", photoIds);
+
+  if (ownedError) throw new Error(ownedError.message);
+
+  const ownedIds = new Set((ownedPhotos ?? []).map((photo) => photo.id));
+  const missing = photoIds.filter((id) => !ownedIds.has(id));
+  if (missing.length > 0) {
+    throw new Error("One or more photos are no longer available.");
+  }
+
+  const { error: titleError } = await supabase
+    .from("albums")
+    .update({ title: parsed.title })
+    .eq("id", parsed.albumId);
+
+  if (titleError) throw new Error(titleError.message);
+
+  const { error: clearError } = await supabase
+    .from("album_photos")
+    .delete()
+    .eq("album_id", parsed.albumId);
+
+  if (clearError) throw new Error(clearError.message);
+
+  const { error: insertError } = await supabase.from("album_photos").insert(
+    parsed.photos.map((photo, index) => ({
+      album_id: parsed.albumId,
+      photo_id: photo.photoId,
+      position: index,
+      caption: photo.caption || null,
+    })),
+  );
+
+  if (insertError) throw new Error(insertError.message);
+
+  revalidatePath("/app/albums");
+  revalidatePath(`/app/albums/${parsed.albumId}`);
+  redirect(`/app/albums/${parsed.albumId}`);
+}
+
+export async function deleteAlbumAction(albumId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to delete an album.");
+  }
+
+  const { error } = await supabase.from("albums").delete().eq("id", albumId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/app/albums");
+  redirect("/app/albums");
+}

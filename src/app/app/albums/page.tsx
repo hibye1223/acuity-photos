@@ -42,7 +42,7 @@ export default async function AlbumsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/app/albums/new">Build an album</Link>
+          <Link href="/app/create">Build an album</Link>
         </Button>
       </div>
 
@@ -54,7 +54,7 @@ export default async function AlbumsPage() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
           <p className="text-muted-foreground">No albums yet.</p>
           <Button asChild variant="outline">
-            <Link href="/app/albums/new">Build your first album</Link>
+            <Link href="/app/create">Build your first album</Link>
           </Button>
         </div>
       ) : (

@@ -51,7 +51,7 @@ export function SignupForm({ next }: { next?: string }) {
     }
 
     if (data.session) {
-      router.push(next ?? "/app");
+      router.push(next ?? "/app/create");
       router.refresh();
       return;
     }

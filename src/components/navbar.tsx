@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "~/app/actions/auth";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
+import { ADMIN_EMAIL } from "~/lib/admin";
 import { createClient } from "~/lib/supabase/server";
 
 export async function Navbar() {
@@ -10,13 +11,7 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single()
-    : { data: null };
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -28,10 +23,7 @@ export async function Navbar() {
           {user ? (
             <>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/app">App</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm" data-tour="upload">
-                <Link href="/app/upload">Upload</Link>
+                <Link href="/app/create">Create</Link>
               </Button>
               <Button asChild variant="ghost" size="sm" data-tour="gallery">
                 <Link href="/app/photos">Gallery</Link>
@@ -39,11 +31,14 @@ export async function Navbar() {
               <Button asChild variant="ghost" size="sm" data-tour="albums">
                 <Link href="/app/albums">Albums</Link>
               </Button>
-              {profile?.is_admin ? (
+              {isAdmin ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/app/admin">Admin</Link>
                 </Button>
               ) : null}
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/settings">Settings</Link>
+              </Button>
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out

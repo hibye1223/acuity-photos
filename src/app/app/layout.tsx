@@ -13,7 +13,7 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/app");
+    redirect("/login?next=/app/create");
   }
 
   const { data: profile } = await supabase

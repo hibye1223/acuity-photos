@@ -7,14 +7,29 @@ export function Switch({
   label,
   description,
   defaultChecked = false,
+  checked: checkedProp,
+  onCheckedChange,
+  disabled,
   className,
 }: {
   label: string;
   description?: string;
   defaultChecked?: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
   className?: string;
 }) {
-  const [checked, setChecked] = useState(defaultChecked);
+  const [uncontrolledChecked, setUncontrolledChecked] =
+    useState(defaultChecked);
+  const checked = checkedProp ?? uncontrolledChecked;
+
+  function toggle() {
+    if (disabled) return;
+    const next = !checked;
+    setUncontrolledChecked(next);
+    onCheckedChange?.(next);
+  }
 
   return (
     <div className={cn("flex items-start justify-between gap-4", className)}>
@@ -29,9 +44,10 @@ export function Switch({
         role="switch"
         aria-checked={checked}
         aria-label={label}
-        onClick={() => setChecked((value) => !value)}
+        disabled={disabled}
+        onClick={toggle}
         className={cn(
-          "relative mt-0.5 h-6 w-10 shrink-0 rounded-full border border-border transition-colors",
+          "relative mt-0.5 h-6 w-10 shrink-0 rounded-full border border-border transition-colors disabled:pointer-events-none disabled:opacity-50",
           checked ? "bg-primary" : "bg-muted",
         )}
       >

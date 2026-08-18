@@ -21,6 +21,18 @@ export function getAlbumAssistantModel() {
 }
 
 /**
+ * Backup model IDs tried, in order, if the primary Album Assistant model
+ * errors out (e.g. a free-tier rate limit) — passed as
+ * providerOptions.gateway.models on the streamText call. Configurable via
+ * ALBUM_ASSISTANT_FALLBACK_MODELS (comma-separated).
+ */
+export function getAlbumAssistantFallbackModels(): string[] {
+  return env.ALBUM_ASSISTANT_FALLBACK_MODELS.split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+}
+
+/**
  * The vision-capable model used to tag photo content (subjects, animals,
  * setting) at upload time, so requests like "dog photos" can be answered
  * without relying on filenames or dates. Swappable via PHOTO_TAGGING_MODEL.

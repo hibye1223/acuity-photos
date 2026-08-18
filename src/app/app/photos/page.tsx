@@ -1,7 +1,12 @@
-import Link from "next/link";
 import type { GalleryPhoto, SortOption } from "~/components/photos/photo-grid";
 import { PhotoGrid } from "~/components/photos/photo-grid";
-import { Button } from "~/components/ui/button";
+import { PhotoUploader } from "~/components/photos/photo-uploader";
+import { Separator } from "~/components/ui/separator";
+import {
+  formatBytes,
+  getStorageLimitBytes,
+  getUsedStorageBytes,
+} from "~/lib/storage-quota";
 import { createClient } from "~/lib/supabase/server";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
@@ -43,6 +48,11 @@ export default async function PhotosPage({
       .order("created_at", { ascending: false });
   }
 
+  const [usedBytes, limitBytes] = await Promise.all([
+    getUsedStorageBytes(supabase),
+    getStorageLimitBytes(supabase),
+  ]);
+
   const { data: photos, error, count } = await query.range(from, to);
 
   const totalCount = count ?? 0;
@@ -72,17 +82,21 @@ export default async function PhotosPage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-16">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your photos</h1>
-          <p className="text-muted-foreground">
-            {totalCount} photo{totalCount === 1 ? "" : "s"} uploaded
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/app/create">Upload photos</Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Your photos</h1>
+        <p className="text-muted-foreground">
+          {totalCount} photo{totalCount === 1 ? "" : "s"} uploaded
+        </p>
       </div>
+
+      <section className="flex flex-col gap-3">
+        <p className="text-xs text-muted-foreground">
+          {formatBytes(usedBytes)} of {formatBytes(limitBytes)} used
+        </p>
+        <PhotoUploader />
+      </section>
+
+      <Separator />
 
       {error ? (
         <p className="text-destructive">
@@ -91,9 +105,6 @@ export default async function PhotosPage({
       ) : totalCount === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
           <p className="text-muted-foreground">No photos yet.</p>
-          <Button asChild variant="outline">
-            <Link href="/app/create">Upload your first photo</Link>
-          </Button>
         </div>
       ) : (
         <PhotoGrid

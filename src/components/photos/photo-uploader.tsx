@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { createPhotoRecord } from "~/app/actions/photos";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { Progress } from "~/components/ui/progress";
-import { extractCapturedAt } from "~/lib/exif";
+import { extractPhotoExif } from "~/lib/exif";
 import { createClient } from "~/lib/supabase/client";
 import { uploadPhotoWithProgress } from "~/lib/upload-with-progress";
 import { cn } from "~/lib/utils";
@@ -21,6 +23,9 @@ type UploadItem = {
   status: UploadStatus;
   progress: number;
   error?: string;
+  /** Applied to every file in the batch it was added with. */
+  location: string | null;
+  people: string[];
 };
 
 const MAX_CONCURRENT_UPLOADS = 3;
@@ -37,6 +42,8 @@ export function PhotoUploader() {
   const router = useRouter();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const [peopleInput, setPeopleInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateItem = useCallback((id: string, patch: Partial<UploadItem>) => {
@@ -62,8 +69,8 @@ export function PhotoUploader() {
         }
 
         updateItem(item.id, { status: "compressing", progress: 0 });
-        const [capturedAt, compressedFile] = await Promise.all([
-          extractCapturedAt(item.file),
+        const [exif, compressedFile] = await Promise.all([
+          extractPhotoExif(item.file),
           imageCompression(item.file, {
             maxSizeMB: 2,
             maxWidthOrHeight: 2560,
@@ -92,8 +99,11 @@ export function PhotoUploader() {
           storagePath,
           fileName: item.file.name,
           contentType: compressedFile.type || item.file.type,
-          takenAt: capturedAt ? capturedAt.toISOString() : null,
+          takenAt: exif.capturedAt ? exif.capturedAt.toISOString() : null,
           sizeBytes: compressedFile.size,
+          location: item.location,
+          people: item.people,
+          gps: exif.gps,
         });
 
         updateItem(item.id, { status: "done", progress: 100 });
@@ -133,18 +143,26 @@ export function PhotoUploader() {
       );
       if (files.length === 0) return;
 
+      const location = locationInput.trim() || null;
+      const people = peopleInput
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+
       const newItems: UploadItem[] = files.map((file) => ({
         id: crypto.randomUUID(),
         file,
         previewUrl: URL.createObjectURL(file),
         status: "compressing",
         progress: 0,
+        location,
+        people,
       }));
 
       setItems((prev) => [...prev, ...newItems]);
       void runPool(newItems);
     },
-    [runPool],
+    [runPool, locationInput, peopleInput],
   );
 
   const removeItem = useCallback((id: string) => {
@@ -157,6 +175,29 @@ export function PhotoUploader() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="upload-location">Where was this? (optional)</Label>
+          <Input
+            id="upload-location"
+            value={locationInput}
+            onChange={(event) => setLocationInput(event.target.value)}
+            placeholder="Pulled from GPS data when available"
+            maxLength={120}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="upload-people">Who's in these? (optional)</Label>
+          <Input
+            id="upload-people"
+            value={peopleInput}
+            onChange={(event) => setPeopleInput(event.target.value)}
+            placeholder="Comma-separated names, e.g. Sam, Alex"
+            maxLength={200}
+          />
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
@@ -197,54 +238,62 @@ export function PhotoUploader() {
       />
 
       {items.length > 0 ? (
-        <ul className="flex flex-col gap-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-            >
-              {/* biome-ignore lint/performance/noImgElement: local blob preview, not a remote/optimizable image */}
-              <img
-                src={item.previewUrl}
-                alt=""
-                className="size-12 shrink-0 rounded-md object-cover"
-              />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-medium">
-                    {item.file.name}
-                  </p>
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">
+            {items.filter((item) => item.status === "done").length} of{" "}
+            {items.length} done
+          </p>
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-card"
+                title={
+                  item.error
+                    ? `${item.file.name}: ${item.error}`
+                    : item.file.name
+                }
+              >
+                {/* biome-ignore lint/performance/noImgElement: local blob preview, not a remote/optimizable image */}
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+                  {item.status !== "done" && item.status !== "error" ? (
+                    <Progress
+                      value={item.progress}
+                      className="h-1 bg-white/30"
+                    />
+                  ) : null}
+                  <span className="flex items-center gap-1 text-[10px] text-white">
                     {item.status === "done" ? (
-                      <CheckCircle2 className="size-3.5 text-success" />
+                      <CheckCircle2 className="size-3 shrink-0 text-success" />
                     ) : item.status === "error" ? (
-                      <AlertCircle className="size-3.5 text-destructive" />
+                      <AlertCircle className="size-3 shrink-0 text-destructive" />
                     ) : (
-                      <Loader2 className="size-3.5 animate-spin" />
+                      <Loader2 className="size-3 shrink-0 animate-spin" />
                     )}
-                    {STATUS_LABEL[item.status]}
+                    <span className="truncate">
+                      {STATUS_LABEL[item.status]}
+                    </span>
                   </span>
                 </div>
-                {item.status === "error" ? (
-                  <p className="text-xs text-destructive">{item.error}</p>
-                ) : (
-                  <Progress
-                    value={item.status === "done" ? 100 : item.progress}
-                  />
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Remove ${item.file.name}`}
-                onClick={() => removeItem(item.id)}
-              >
-                <X className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Remove ${item.file.name}`}
+                  onClick={() => removeItem(item.id)}
+                  className="absolute top-1 right-1 size-6 bg-black/40 text-white opacity-0 hover:bg-black/60 hover:text-white group-hover:opacity-100"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

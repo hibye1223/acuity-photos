@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { AlbumAssistant } from "~/components/albums/album-assistant";
+import { AlbumBuilderSection } from "~/components/albums/album-builder-section";
 import { PhotoUploader } from "~/components/photos/photo-uploader";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import {
+  DEFAULT_CAPTION_STYLE,
+  isCaptionStyle,
+} from "~/lib/ai/album-assistant";
+import { getExamplePrompts } from "~/lib/ai/example-prompts";
 import {
   formatBytes,
   getStorageLimitBytes,
@@ -12,10 +17,25 @@ import { createClient } from "~/lib/supabase/server";
 
 export default async function CreatePage() {
   const supabase = await createClient();
-  const [usedBytes, limitBytes] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [usedBytes, limitBytes, examplePrompts, profile] = await Promise.all([
     getUsedStorageBytes(supabase),
     getStorageLimitBytes(supabase),
+    getExamplePrompts(supabase),
+    user
+      ? supabase
+          .from("profiles")
+          .select("default_caption_style, challenge_me")
+          .eq("id", user.id)
+          .single()
+          .then((result) => result.data)
+      : Promise.resolve(null),
   ]);
+  const initialCaptionStyle = isCaptionStyle(profile?.default_caption_style)
+    ? profile.default_caption_style
+    : DEFAULT_CAPTION_STYLE;
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-4 py-16">
@@ -36,18 +56,11 @@ export default async function CreatePage() {
         </div>
       </div>
 
-      <section className="flex flex-col gap-4" data-tour="ai-assistant">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Album Assistant
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Describe the album you want. It'll pull together a draft — you make
-            it yours before saving anything.
-          </p>
-        </div>
-        <AlbumAssistant />
-      </section>
+      <AlbumBuilderSection
+        examplePrompts={examplePrompts}
+        initialCaptionStyle={initialCaptionStyle}
+        initialChallengeMe={profile?.challenge_me ?? false}
+      />
 
       <Separator />
 

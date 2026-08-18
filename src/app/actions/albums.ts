@@ -180,3 +180,100 @@ export async function deleteAlbumAction(albumId: string) {
   revalidatePath("/app/albums");
   redirect("/app/albums");
 }
+
+export type AlbumShareState = {
+  shareEnabled: boolean;
+  shareToken: string | null;
+};
+
+/**
+ * Turns on the public share link for an album. Reuses an existing token if
+ * one was already generated (e.g. previously shared then turned off), so
+ * re-enabling doesn't invalidate a link someone already has.
+ */
+export async function enableAlbumShareAction(
+  albumId: string,
+): Promise<AlbumShareState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to share an album.");
+  }
+
+  const { data: album, error: fetchError } = await supabase
+    .from("albums")
+    .select("share_token")
+    .eq("id", albumId)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!album) throw new Error("That album no longer exists.");
+
+  const shareToken = album.share_token ?? crypto.randomUUID();
+
+  const { error } = await supabase
+    .from("albums")
+    .update({ share_enabled: true, share_token: shareToken })
+    .eq("id", albumId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/albums/${albumId}`);
+  return { shareEnabled: true, shareToken };
+}
+
+export async function disableAlbumShareAction(
+  albumId: string,
+): Promise<AlbumShareState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to change sharing settings.");
+  }
+
+  const { data: album, error } = await supabase
+    .from("albums")
+    .update({ share_enabled: false })
+    .eq("id", albumId)
+    .select("share_token")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/albums/${albumId}`);
+  return { shareEnabled: false, shareToken: album.share_token };
+}
+
+/**
+ * Issues a fresh share token, invalidating any previously shared link for
+ * this album.
+ */
+export async function regenerateAlbumShareLinkAction(
+  albumId: string,
+): Promise<AlbumShareState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to change sharing settings.");
+  }
+
+  const shareToken = crypto.randomUUID();
+  const { error } = await supabase
+    .from("albums")
+    .update({ share_token: shareToken, share_enabled: true })
+    .eq("id", albumId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/albums/${albumId}`);
+  return { shareEnabled: true, shareToken };
+}

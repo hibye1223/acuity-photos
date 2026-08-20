@@ -1,5 +1,6 @@
 "use client";
 
+import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { updateProfile } from "~/app/actions/profile";
@@ -82,8 +83,9 @@ export function ProfileForm({
             className="size-14 rounded-full object-cover"
           />
         ) : (
-          <div className="flex size-14 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground">
-            No photo
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <UserRound className="size-6" aria-hidden="true" />
+            <span className="sr-only">No photo</span>
           </div>
         )}
         <div className="flex flex-col gap-2">

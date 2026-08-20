@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
+import { toOne } from "~/lib/utils";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
@@ -17,7 +18,7 @@ export default async function AlbumsPage() {
     .order("position", { referencedTable: "album_photos", ascending: true });
 
   const coverPaths = (albums ?? [])
-    .map((album) => album.album_photos[0]?.photos?.[0]?.storage_path)
+    .map((album) => toOne(album.album_photos[0]?.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
   const { data: signedUrls } = coverPaths.length
@@ -60,7 +61,9 @@ export default async function AlbumsPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {albums.map((album) => {
-            const coverPath = album.album_photos[0]?.photos?.[0]?.storage_path;
+            const coverPath = toOne(
+              album.album_photos[0]?.photos,
+            )?.storage_path;
             const coverUrl = coverPath ? urlByPath.get(coverPath) : undefined;
 
             return (

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { generatePhotoTags } from "~/lib/ai/photo-tagging";
+import { reverseGeocode } from "~/lib/geocode";
 import {
   formatBytes,
   getStorageLimitBytes,
@@ -19,12 +20,20 @@ export async function createPhotoRecord({
   contentType,
   takenAt,
   sizeBytes,
+  location,
+  people,
+  gps,
 }: {
   storagePath: string;
   fileName: string;
   contentType: string;
   takenAt: string | null;
   sizeBytes: number;
+  /** Manually typed in at upload time. Takes priority over GPS-based geocoding. */
+  location: string | null;
+  /** Names the uploader explicitly typed in — never inferred from face data. */
+  people: string[];
+  gps: { latitude: number; longitude: number } | null;
 }) {
   const supabase = await createClient();
   const {
@@ -53,6 +62,15 @@ export async function createPhotoRecord({
     );
   }
 
+  const trimmedLocation = location?.trim() || null;
+  const normalizedPeople = [
+    ...new Set(
+      people
+        .map((name) => name.trim().toLowerCase())
+        .filter((name) => name.length > 0),
+    ),
+  ];
+
   const { data: photo, error } = await supabase
     .from("photos")
     .insert({
@@ -62,6 +80,8 @@ export async function createPhotoRecord({
       content_type: contentType,
       taken_at: takenAt,
       size_bytes: sizeBytes,
+      location: trimmedLocation,
+      people: normalizedPeople.length > 0 ? normalizedPeople : null,
     })
     .select("id")
     .single();
@@ -72,9 +92,12 @@ export async function createPhotoRecord({
 
   revalidatePath("/app/photos");
 
-  // Runs after the response is sent, so tagging latency never delays the
-  // upload. Best-effort: a tagging failure just leaves the photo untagged.
+  // Runs after the response is sent, so tagging/geocoding latency never
+  // delays the upload. Best-effort: a failure just leaves the field unset.
   after(() => tagPhotoContent(supabase, photo.id, storagePath));
+  if (!trimmedLocation && gps) {
+    after(() => geocodePhotoLocation(supabase, photo.id, gps));
+  }
 }
 
 export async function deletePhotos(photoIds: string[]) {
@@ -125,6 +148,26 @@ export async function deletePhotos(photoIds: string[]) {
 
   revalidatePath("/app/photos");
   revalidatePath("/app/albums");
+}
+
+async function geocodePhotoLocation(
+  supabase: SupabaseClient,
+  photoId: string,
+  gps: { latitude: number; longitude: number },
+) {
+  try {
+    const location = await reverseGeocode(gps.latitude, gps.longitude);
+    if (!location) return;
+
+    const { error } = await supabase
+      .from("photos")
+      .update({ location })
+      .eq("id", photoId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error(`Failed to geocode photo ${photoId}:`, error);
+  }
 }
 
 async function tagPhotoContent(

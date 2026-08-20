@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import type { AlbumDraftPhoto } from "~/app/actions/album-assistant";
-import { EditAlbumForm } from "~/components/albums/edit-album-form";
+import { EditAlbumSection } from "~/components/albums/edit-album-section";
+import {
+  DEFAULT_CAPTION_STYLE,
+  isCaptionStyle,
+} from "~/lib/ai/album-assistant";
 import { createClient } from "~/lib/supabase/server";
+import { toOne } from "~/lib/utils";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
@@ -12,6 +17,17 @@ export default async function EditAlbumPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("default_caption_style, challenge_me")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
 
   const { data: album, error } = await supabase
     .from("albums")
@@ -26,7 +42,7 @@ export default async function EditAlbumPage({
   if (!album) notFound();
 
   const paths = album.album_photos
-    .map((entry) => entry.photos?.[0]?.storage_path)
+    .map((entry) => toOne(entry.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
   const { data: signedUrls } = paths.length
@@ -42,7 +58,7 @@ export default async function EditAlbumPage({
   );
 
   const initialPhotos: AlbumDraftPhoto[] = album.album_photos.map((entry) => {
-    const photo = entry.photos?.[0];
+    const photo = toOne(entry.photos);
     return {
       photoId: entry.photo_id,
       fileName: photo?.file_name ?? "",
@@ -62,10 +78,16 @@ export default async function EditAlbumPage({
         </p>
       </div>
 
-      <EditAlbumForm
+      <EditAlbumSection
         albumId={album.id}
         initialTitle={album.title}
         initialPhotos={initialPhotos}
+        initialCaptionStyle={
+          isCaptionStyle(profile?.default_caption_style)
+            ? profile.default_caption_style
+            : DEFAULT_CAPTION_STYLE
+        }
+        initialChallengeMe={profile?.challenge_me ?? false}
       />
     </main>
   );

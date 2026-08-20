@@ -8,11 +8,15 @@ import { createAdminClient } from "~/lib/supabase/admin";
  * happen asynchronously — this handler, not the checkout success page, is
  * the source of truth for a profile's `plan`.
  */
-async function setPlanForCustomer(customerId: string, plan: "free" | "pro") {
+async function setPlanForCustomer(
+  customerId: string,
+  plan: "free" | "pro",
+  subscriptionId: string,
+) {
   const admin = createAdminClient();
   const { error } = await admin
     .from("profiles")
-    .update({ plan })
+    .update({ plan, stripe_subscription_id: subscriptionId })
     .eq("stripe_customer_id", customerId);
   if (error) throw new Error(error.message);
 }
@@ -47,7 +51,13 @@ export async function POST(request: Request) {
         typeof session.customer === "string"
           ? session.customer
           : session.customer?.id;
-      if (customerId) await setPlanForCustomer(customerId, "pro");
+      const subscriptionId =
+        typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription?.id;
+      if (customerId && subscriptionId) {
+        await setPlanForCustomer(customerId, "pro", subscriptionId);
+      }
       break;
     }
     case "customer.subscription.updated":
@@ -59,7 +69,11 @@ export async function POST(request: Request) {
           : subscription.customer.id;
       const isActive =
         subscription.status === "active" || subscription.status === "trialing";
-      await setPlanForCustomer(customerId, isActive ? "pro" : "free");
+      await setPlanForCustomer(
+        customerId,
+        isActive ? "pro" : "free",
+        subscription.id,
+      );
       break;
     }
     default:

@@ -1,8 +1,10 @@
+import { DollarSign } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "~/app/actions/auth";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
 import { ADMIN_EMAIL } from "~/lib/admin";
+import { isPlan } from "~/lib/plans";
 import { createClient } from "~/lib/supabase/server";
 
 export async function Navbar() {
@@ -12,6 +14,16 @@ export async function Navbar() {
   } = await supabase.auth.getUser();
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  let isFreePlan = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    isFreePlan = !isPlan(profile?.plan) || profile.plan === "free";
+  }
 
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -55,6 +67,23 @@ export async function Navbar() {
               </Button>
             </>
           )}
+          {user && isFreePlan ? (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="text-primary"
+              aria-label="Upgrade to Pro"
+              title="Upgrade to Pro"
+            >
+              <Link href="/app/settings#plan">
+                <DollarSign
+                  className="size-5 animate-bounce [animation-duration:2s]"
+                  strokeWidth={2.75}
+                />
+              </Link>
+            </Button>
+          ) : null}
           <ThemeToggle />
         </div>
       </div>

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isPlan, PLAN_STORAGE_BYTES } from "~/lib/plans";
 
-export const MAX_STORAGE_BYTES = 1024 * 1024 * 1024; // 1 GB per user, unless an admin overrides it
+// The free-tier default, unless an admin override or a paid plan applies.
+export const MAX_STORAGE_BYTES = PLAN_STORAGE_BYTES.free;
 
 /** Relies on RLS to scope rows to the signed-in user — never filter by user_id here. */
 export async function getUsedStorageBytes(
@@ -13,7 +15,10 @@ export async function getUsedStorageBytes(
   return (data ?? []).reduce((sum, row) => sum + (row.size_bytes ?? 0), 0);
 }
 
-/** The signed-in user's quota: their admin-set override, or the default. */
+/**
+ * The signed-in user's quota: their admin-set override if one exists,
+ * otherwise whatever their plan (free/pro) grants.
+ */
 export async function getStorageLimitBytes(
   supabase: SupabaseClient,
 ): Promise<number> {
@@ -24,11 +29,14 @@ export async function getStorageLimitBytes(
 
   const { data } = await supabase
     .from("profiles")
-    .select("storage_quota_bytes")
+    .select("storage_quota_bytes, plan")
     .eq("id", user.id)
     .single();
 
-  return data?.storage_quota_bytes ?? MAX_STORAGE_BYTES;
+  if (data?.storage_quota_bytes) return data.storage_quota_bytes;
+
+  const plan = isPlan(data?.plan) ? data.plan : "free";
+  return PLAN_STORAGE_BYTES[plan];
 }
 
 export function formatBytes(bytes: number): string {

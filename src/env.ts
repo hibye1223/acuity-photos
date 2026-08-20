@@ -30,6 +30,9 @@ export const env = createEnv({
       .string()
       .min(1)
       .default("google/gemini-2.5-flash-lite"),
+    STRIPE_SECRET_KEY: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1),
+    STRIPE_PRO_PRICE_ID: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -49,6 +52,9 @@ export const env = createEnv({
     ALBUM_ASSISTANT_FALLBACK_MODELS:
       process.env.ALBUM_ASSISTANT_FALLBACK_MODELS,
     PHOTO_TAGGING_MODEL: process.env.PHOTO_TAGGING_MODEL,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRO_PRICE_ID: process.env.STRIPE_PRO_PRICE_ID,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

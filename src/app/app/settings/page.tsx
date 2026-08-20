@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AiPreferencesForm } from "~/components/account/ai-preferences-form";
 import { ChangePasswordForm } from "~/components/account/change-password-form";
 import { DeleteAccountButton } from "~/components/account/delete-account-button";
+import { PlanCard } from "~/components/account/plan-card";
 import { ProfileForm } from "~/components/account/profile-form";
 import {
   Card,
@@ -14,6 +15,8 @@ import {
   DEFAULT_CAPTION_STYLE,
   isCaptionStyle,
 } from "~/lib/ai/album-assistant";
+import { isPlan } from "~/lib/plans";
+import { getStorageLimitBytes, getUsedStorageBytes } from "~/lib/storage-quota";
 import { createClient } from "~/lib/supabase/server";
 
 export default async function SettingsPage() {
@@ -28,9 +31,14 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, default_caption_style, challenge_me")
+    .select("full_name, avatar_url, default_caption_style, challenge_me, plan")
     .eq("id", user.id)
     .single();
+
+  const [storageUsedBytes, storageLimitBytes] = await Promise.all([
+    getUsedStorageBytes(supabase),
+    getStorageLimitBytes(supabase),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-16">
@@ -46,6 +54,20 @@ export default async function SettingsPage() {
             userId={user.id}
             initialFullName={profile?.full_name ?? null}
             initialAvatarUrl={profile?.avatar_url ?? null}
+          />
+        </CardContent>
+      </Card>
+
+      <Card id="plan" className="scroll-mt-20">
+        <CardHeader>
+          <CardTitle className="text-base">Plan</CardTitle>
+          <CardDescription>Your storage plan and usage.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlanCard
+            plan={isPlan(profile?.plan) ? profile.plan : "free"}
+            storageUsedBytes={storageUsedBytes}
+            storageLimitBytes={storageLimitBytes}
           />
         </CardContent>
       </Card>

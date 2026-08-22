@@ -22,7 +22,7 @@ export default async function SignupPage({
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect(next ?? "/app");
+    redirect(next ?? "/app/create");
   }
 
   return (

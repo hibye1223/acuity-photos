@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
+import { toOne } from "~/lib/utils";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
@@ -17,7 +18,7 @@ export default async function AlbumsPage() {
     .order("position", { referencedTable: "album_photos", ascending: true });
 
   const coverPaths = (albums ?? [])
-    .map((album) => album.album_photos[0]?.photos?.[0]?.storage_path)
+    .map((album) => toOne(album.album_photos[0]?.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
   const { data: signedUrls } = coverPaths.length
@@ -42,7 +43,7 @@ export default async function AlbumsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/app/albums/new">Build an album</Link>
+          <Link href="/app/create">Build an album</Link>
         </Button>
       </div>
 
@@ -54,13 +55,15 @@ export default async function AlbumsPage() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
           <p className="text-muted-foreground">No albums yet.</p>
           <Button asChild variant="outline">
-            <Link href="/app/albums/new">Build your first album</Link>
+            <Link href="/app/create">Build your first album</Link>
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {albums.map((album) => {
-            const coverPath = album.album_photos[0]?.photos?.[0]?.storage_path;
+            const coverPath = toOne(
+              album.album_photos[0]?.photos,
+            )?.storage_path;
             const coverUrl = coverPath ? urlByPath.get(coverPath) : undefined;
 
             return (

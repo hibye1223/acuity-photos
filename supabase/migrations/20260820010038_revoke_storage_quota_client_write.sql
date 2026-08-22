@@ -1,0 +1,11 @@
+-- storage_quota_bytes (20260813162521_add_storage_quota_override.sql) is
+-- meant to be an admin-only override, written through the service-role
+-- client (see src/app/actions/admin.ts). But profiles' "individuals can
+-- update own profile" policy (20260802000000_create_profiles.sql) lets a
+-- signed-in user write any column on their own row — including this one —
+-- so a user could call supabase.from("profiles").update({
+-- storage_quota_bytes: <huge number> }) directly from the browser and
+-- bypass their plan's storage limit. Same fix pattern as plan/stripe_* in
+-- 20260818011110_add_billing_plan.sql and
+-- 20260820003109_add_stripe_customer_fields.sql.
+revoke update (storage_quota_bytes) on public.profiles from authenticated;

@@ -120,13 +120,15 @@ export function createPhotoRetrievalTools(
     }),
     searchPhotosByTag: tool({
       description:
-        "Find photos whose AI-generated content tags overlap with the given list (e.g. ['dog'] or ['beach', 'sunset']). Use this for requests about subject or content rather than dates. Tags are short, best-effort visual labels — not every photo has been tagged yet, so a miss here doesn't mean the photo doesn't exist.",
+        "Find photos whose AI-generated tags overlap with the given list. Tags cover subject/content (e.g. ['dog'], ['beach', 'sunset']), dominant colors (e.g. ['red']), and legible text visible in the photo (e.g. ['welcome']) — all in one flat list, so use this for any request about what's visibly in a photo, not just its subject. Tags are short, best-effort visual labels — not every photo has been tagged yet, so a miss here doesn't mean the photo doesn't exist.",
       inputSchema: z.object({
         tags: z
           .array(z.string().trim().toLowerCase().min(1))
           .min(1)
           .max(10)
-          .describe("Lowercase content tags to match, e.g. ['dog']"),
+          .describe(
+            "Lowercase tags to match — subject, color, or text, e.g. ['dog'] or ['red']",
+          ),
         limit: z.number().int().min(1).max(100).default(60),
       }),
       execute: async ({ tags, limit }) => {

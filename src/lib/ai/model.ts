@@ -2,13 +2,12 @@ import { createGateway } from "@ai-sdk/gateway";
 import { env } from "~/env";
 
 function getGateway() {
-  if (!env.AI_GATEWAY_API_KEY) {
-    throw new Error(
-      "AI_GATEWAY_API_KEY is not set. Add it to your environment to use AI features.",
-    );
-  }
-
-  return createGateway({ apiKey: env.AI_GATEWAY_API_KEY });
+  // No apiKey means @ai-sdk/gateway falls back to the OIDC token Vercel
+  // provisions automatically (VERCEL_OIDC_TOKEN) when AI_GATEWAY_API_KEY
+  // isn't set — matches Vercel's default, zero-config AI Gateway auth.
+  return createGateway(
+    env.AI_GATEWAY_API_KEY ? { apiKey: env.AI_GATEWAY_API_KEY } : undefined,
+  );
 }
 
 /**

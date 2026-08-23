@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { updateAiPreferences } from "~/app/actions/profile";
+import {
+  updateAiPreferences,
+  updateFaceGroupingEnabled,
+} from "~/app/actions/profile";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -25,15 +28,34 @@ type Status = "idle" | "saving" | "saved" | "error";
 export function AiPreferencesForm({
   initialCaptionStyle,
   initialChallengeMe,
+  initialFaceGroupingEnabled,
 }: {
   initialCaptionStyle: CaptionStyle;
   initialChallengeMe: boolean;
+  initialFaceGroupingEnabled: boolean;
 }) {
   const [captionStyle, setCaptionStyle] =
     useState<CaptionStyle>(initialCaptionStyle);
   const [challengeMe, setChallengeMe] = useState(initialChallengeMe);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [faceGroupingEnabled, setFaceGroupingEnabled] = useState(
+    initialFaceGroupingEnabled,
+  );
+  const [faceGroupingStatus, setFaceGroupingStatus] = useState<Status>("idle");
+
+  async function handleFaceGroupingChange(value: boolean) {
+    setFaceGroupingEnabled(value);
+    setFaceGroupingStatus("saving");
+    try {
+      await updateFaceGroupingEnabled(value);
+      setFaceGroupingStatus("saved");
+    } catch (err) {
+      setFaceGroupingEnabled(!value);
+      setFaceGroupingStatus("error");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    }
+  }
 
   async function handleSave() {
     setStatus("saving");
@@ -88,6 +110,16 @@ export function AiPreferencesForm({
           setStatus("idle");
         }}
       />
+
+      <Switch
+        label="Suggest people groupings"
+        description="Let the AI notice photos that might show the same person, based on a physical description (never an identity guess) — you review and name each suggested group yourself. Off by default."
+        checked={faceGroupingEnabled}
+        onCheckedChange={handleFaceGroupingChange}
+      />
+      {faceGroupingStatus === "saved" && (
+        <p className="-mt-2 text-sm text-muted-foreground">Preference saved.</p>
+      )}
 
       <Button
         type="button"

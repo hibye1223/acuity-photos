@@ -75,3 +75,26 @@ export async function updateAiPreferences({
   revalidatePath("/app/create");
   revalidatePath("/app/settings");
 }
+
+export async function updateFaceGroupingEnabled(enabled: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to update this setting.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ face_grouping_enabled: enabled })
+    .eq("id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app/people");
+}

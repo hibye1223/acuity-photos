@@ -31,7 +31,9 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, default_caption_style, challenge_me, plan")
+    .select(
+      "full_name, avatar_url, default_caption_style, challenge_me, plan, face_grouping_enabled",
+    )
     .eq("id", user.id)
     .single();
 
@@ -105,6 +107,7 @@ export default async function SettingsPage() {
                 : DEFAULT_CAPTION_STYLE
             }
             initialChallengeMe={profile?.challenge_me ?? false}
+            initialFaceGroupingEnabled={profile?.face_grouping_enabled ?? false}
           />
         </CardContent>
       </Card>

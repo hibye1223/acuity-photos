@@ -94,7 +94,7 @@ export async function createPhotoRecord({
 
   // Runs after the response is sent, so tagging/geocoding latency never
   // delays the upload. Best-effort: a failure just leaves the field unset.
-  after(() => tagPhotoContent(supabase, photo.id, storagePath));
+  after(() => tagPhotoContent(supabase, user.id, photo.id, storagePath));
   if (!trimmedLocation && gps) {
     after(() => geocodePhotoLocation(supabase, photo.id, gps));
   }
@@ -172,24 +172,40 @@ async function geocodePhotoLocation(
 
 async function tagPhotoContent(
   supabase: SupabaseClient,
+  userId: string,
   photoId: string,
   storagePath: string,
 ) {
   try {
-    const { data: signed, error: signError } = await supabase.storage
-      .from("photos")
-      .createSignedUrl(storagePath, TAGGING_SIGNED_URL_TTL_SECONDS);
+    const [{ data: signed, error: signError }, { data: profile }] =
+      await Promise.all([
+        supabase.storage
+          .from("photos")
+          .createSignedUrl(storagePath, TAGGING_SIGNED_URL_TTL_SECONDS),
+        supabase
+          .from("profiles")
+          .select("face_grouping_enabled")
+          .eq("id", userId)
+          .single(),
+      ]);
 
     if (signError || !signed) {
       throw signError ?? new Error("No signed URL returned");
     }
 
-    const tags = await generatePhotoTags(signed.signedUrl);
-    if (tags.length === 0) return;
+    const { tags, personDescription } = await generatePhotoTags(
+      signed.signedUrl,
+    );
+    if (tags.length === 0 && !profile?.face_grouping_enabled) return;
 
     const { error: updateError } = await supabase
       .from("photos")
-      .update({ tags })
+      .update({
+        ...(tags.length > 0 ? { tags } : {}),
+        ...(profile?.face_grouping_enabled
+          ? { person_description: personDescription }
+          : {}),
+      })
       .eq("id", photoId);
 
     if (updateError) throw updateError;

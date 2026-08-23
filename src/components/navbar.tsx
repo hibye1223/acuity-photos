@@ -16,13 +16,15 @@ export async function Navbar() {
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   let isFreePlan = false;
+  let faceGroupingEnabled = false;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("plan")
+      .select("plan, face_grouping_enabled")
       .eq("id", user.id)
       .single();
     isFreePlan = !isPlan(profile?.plan) || profile.plan === "free";
+    faceGroupingEnabled = profile?.face_grouping_enabled ?? false;
   }
 
   return (
@@ -43,6 +45,11 @@ export async function Navbar() {
               <Button asChild variant="ghost" size="sm" data-tour="albums">
                 <Link href="/app/albums">Albums</Link>
               </Button>
+              {faceGroupingEnabled ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/app/people">People</Link>
+                </Button>
+              ) : null}
               {isAdmin ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/app/admin">Admin</Link>

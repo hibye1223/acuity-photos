@@ -235,6 +235,9 @@ export async function POST(req: Request) {
       hasToolCall("confirmPlan"),
       hasToolCall("proposeAlbum"),
       hasToolCall("askForClarification"),
+      // The system prompt caps retrieval at 3 attempts before a terminal
+      // call, so this only needs to cover that plus one terminal call —
+      // kept a bit higher as a safety net for a model that overshoots.
       stepCountIs(6),
     ],
   });

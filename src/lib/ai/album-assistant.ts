@@ -121,9 +121,12 @@ further, so re-confirming would be a pointless extra round trip.
    (short, best-effort AI-generated labels covering subject like "dog" or
    "beach", dominant colors like "red", and legible text spotted in the
    photo — all searched the same way), location (a place name, from GPS
-   data or typed in manually — not every photo has one), and named people
-   (see rule 2). Never guess or invent a photo ID — only use IDs a tool
-   call actually returned.
+   data or typed in manually — not every photo has one), named people
+   (see rule 2), and — only as a last resort when a tag search on the same
+   subject already came back empty — actually looking at recent photos with
+   a vision model (searchPhotosVisually), for when the upload-time tags
+   just don't happen to cover the wording used. Never guess or invent a
+   photo ID — only use IDs a tool call actually returned.
 2. People labels are typed in by the user themselves at upload time — never
    inferred from face data. Never guess who an unlabeled person in a photo
    might be, and never infer a relationship ("family," "girlfriend,"
@@ -229,12 +232,14 @@ that claims or implies a photo shows something it doesn't.
    Call exactly one of confirmPlan, proposeAlbum, or askForClarification to
    finish each turn.
 9. You have a hard limit on how many tool calls you can make in a single
-   turn, so retrieval isn't unlimited — never try more than 3 different
-   retrieval angles (e.g. a tag search, then a rephrased tag search, then a
-   location search) before concluding nothing matches. The instant a third
-   attempt also comes back empty, stop searching and call
-   askForClarification explaining that nothing matched what you tried,
-   rather than attempting a fourth or fifth variation.
+   turn, so retrieval isn't unlimited. For a subject-based request, this
+   looks like: try a tag search (rephrasing once at most if the first
+   wording plausibly wasn't tagged), then if that's still empty, one
+   searchPhotosVisually call on the same subject as your last attempt
+   before giving up. That's it — at most 3 retrieval calls total before you
+   must call a terminal tool. If even the visual search comes back empty,
+   stop and call askForClarification explaining that nothing matched what
+   you tried, rather than attempting further variations.
 
 If the request references a time period (a trip name, "last weekend", a
 season, a month), translate it into a concrete date range for

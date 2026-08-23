@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { tool } from "ai";
+import { generateObject, tool } from "ai";
 import { z } from "zod";
+import { getPhotoTaggingModel } from "~/lib/ai/model";
 
 export type RetrievedPhoto = {
   id: string;
@@ -197,6 +198,92 @@ export function createPhotoRetrievalTools(
 
         if (error) throw new Error(error.message);
         const photos = (data ?? []).map(toRetrievedPhoto);
+        onPhotosRetrieved?.(photos);
+        return { photos };
+      },
+    }),
+    searchPhotosVisually: tool({
+      description:
+        "Last-resort fallback: actually looks at recent photos with a vision model to check for something the tag/location/person tools didn't find (e.g. the exact tag wording wasn't a match, or nothing's been tagged yet). Slower and more expensive than the other tools, so only use this after a tag-based search on the same subject has already come back empty — never as a first attempt.",
+      inputSchema: z.object({
+        description: z
+          .string()
+          .trim()
+          .min(1)
+          .describe(
+            "What to visually look for, in plain words, e.g. 'a computer terminal or command-line screen'",
+          ),
+        limit: z.number().int().min(1).max(30).default(20),
+      }),
+      execute: async ({ description, limit }) => {
+        const { data, error } = await supabase
+          .from("photos")
+          .select(`${PHOTO_COLUMNS}, storage_path`)
+          .eq("user_id", userId)
+          .order("taken_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(limit);
+
+        if (error) throw new Error(error.message);
+        const candidates = data ?? [];
+        if (candidates.length === 0) return { photos: [] };
+
+        const { data: signedUrls } = await supabase.storage
+          .from("photos")
+          .createSignedUrls(
+            candidates.map((c) => c.storage_path),
+            60 * 5,
+          );
+        const urlByPath = new Map(
+          (signedUrls ?? [])
+            .filter((entry) => entry.path && entry.signedUrl)
+            .map((entry) => [entry.path as string, entry.signedUrl as string]),
+        );
+        const withUrls = candidates
+          .map((c) => ({ row: c, url: urlByPath.get(c.storage_path) }))
+          .filter(
+            (
+              c,
+            ): c is { row: PhotoRow & { storage_path: string }; url: string } =>
+              !!c.url,
+          );
+        if (withUrls.length === 0) return { photos: [] };
+
+        const { object } = await generateObject({
+          model: getPhotoTaggingModel(),
+          schema: z.object({
+            matchIndices: z
+              .array(z.number().int().min(0))
+              .describe(
+                "0-based indices (in the order the photos were given) of photos that actually show the described thing. Empty array if none match.",
+              ),
+          }),
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `Here are ${withUrls.length} photos, numbered in order starting at 0. Which of them show: ${description}?`,
+                },
+                ...withUrls.map(
+                  (c, index) =>
+                    ({
+                      type: "file" as const,
+                      mediaType: "image",
+                      data: { type: "url" as const, url: new URL(c.url) },
+                      filename: `photo-${index}`,
+                    }) as const,
+                ),
+              ],
+            },
+          ],
+        });
+
+        const matched = object.matchIndices
+          .map((i) => withUrls[i]?.row)
+          .filter((row): row is PhotoRow & { storage_path: string } => !!row);
+        const photos = matched.map(toRetrievedPhoto);
         onPhotosRetrieved?.(photos);
         return { photos };
       },

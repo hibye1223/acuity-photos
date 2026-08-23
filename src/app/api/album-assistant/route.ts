@@ -48,6 +48,7 @@ const RETRIEVAL_TOOL_TYPES = new Set([
   "tool-searchPhotosByTag",
   "tool-searchPhotosByLocation",
   "tool-searchPhotosByPerson",
+  "tool-searchPhotosVisually",
 ]);
 
 /**

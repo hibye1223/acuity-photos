@@ -84,6 +84,45 @@ export const askForClarificationSchema = z.object({
 });
 
 /**
+ * Shared caption tone guidance, reused by both the Album Assistant's system
+ * prompt (which drafts a placeholder caption from tags/date/location alone)
+ * and the vision-based captioning pass in the /api/album-assistant route
+ * (which looks at each photo's actual pixels and overwrites that draft with
+ * a caption grounded in what's really shown).
+ */
+export function buildCaptionStyleGuide(captionStyle: CaptionStyle): string {
+  return `Base rule for all styles: captions are short (under 12 words), specific to
+what's actually shown in the photo, and written the way a person would jot a
+quick note — never the way an AI summarizes an image. Use plain, everyday
+words, not the fanciest synonym ("trip" not "excursion," "photo" not
+"snapshot"). If you don't have enough signal for something specific, leave
+the caption blank rather than filling it with generic warmth.
+
+Adjust tone based on the style setting: "${captionStyle}"
+
+- "minimal" (default): Just the facts, almost fragment-like. "Golden hour,
+  the cabin." "First snow." "Still figuring out the grill." No adjectives
+  unless one is doing real work.
+- "warm": Slightly more personal, like a note to a friend, but still plain-
+  spoken. "Everyone made it out for this one." "The kids wouldn't stop
+  laughing here." Avoid greeting-card phrasing ("cherished," "precious,"
+  "beautiful moment").
+- "playful": A little wit is welcome if something in the photo supports it
+  (a face, a mishap, bad weather). "Bold choice, that hat." "Nobody was
+  ready for this pic." Never forced humor — if nothing suggests a joke,
+  fall back to minimal.
+- "descriptive": A bit more context allowed (what/where/when), still no
+  filler. "Sunday hike, the ridge trail, first cold morning of fall." Avoid
+  turning into a full sentence with "This photo shows..." framing.
+
+Across every style, always avoid: generic filler ("Great memory!", "A
+beautiful moment"), overly formal description ("This photograph captures..."),
+corporate-sounding warmth ("Making memories together"), and explaining the
+obvious ("A photo of people at the beach"). Never write a caption that claims
+or implies a photo shows something it doesn't.`;
+}
+
+/**
  * Never sent to the client — only used server-side by the streaming
  * /api/album-assistant route.
  */
@@ -169,38 +208,15 @@ further, so re-confirming would be a pointless extra round trip.
 
 ## Caption style
 
-Current style setting for this request: "${captionStyle}"
+${buildCaptionStyleGuide(captionStyle)}
 
-Base rule for all styles: captions are short (under 12 words), specific to
-what's likely happening in the photo (based on date or tags), and written
-the way a person would jot a quick note — never the way an AI summarizes an
-image. Use plain, everyday words, not the fanciest synonym ("trip" not
-"excursion," "photo" not "snapshot"). If you don't have enough signal for
-something specific, leave the caption blank rather than filling it with
-generic warmth.
-
-Adjust tone based on the style setting above:
-
-- "minimal" (default): Just the facts, almost fragment-like. "Golden hour,
-  the cabin." "First snow." "Still figuring out the grill." No adjectives
-  unless one is doing real work.
-- "warm": Slightly more personal, like a note to a friend, but still plain-
-  spoken. "Everyone made it out for this one." "The kids wouldn't stop
-  laughing here." Avoid greeting-card phrasing ("cherished," "precious,"
-  "beautiful moment").
-- "playful": A little wit is welcome if something in the photo supports it
-  (a face, a mishap, bad weather). "Bold choice, that hat." "Nobody was
-  ready for this pic." Never forced humor — if nothing suggests a joke,
-  fall back to minimal.
-- "descriptive": A bit more context allowed (what/where/when), still no
-  filler. "Sunday hike, the ridge trail, first cold morning of fall." Avoid
-  turning into a full sentence with "This photo shows..." framing.
-
-Across every style, always avoid: generic filler ("Great memory!", "A
-beautiful moment"), overly formal description ("This photograph captures..."),
-corporate-sounding warmth ("Making memories together"), and explaining the
-obvious ("A photo of people at the beach"). Never write a title or caption
-that claims or implies a photo shows something it doesn't.
+Note: you're writing each caption from tags/date/location alone, without
+seeing the photo's actual pixels — a separate vision pass runs after you
+submit proposeAlbum and overwrites your captions with ones grounded in what
+the photo actually shows. So write your best guess from the signal you have,
+but don't stress over precision here; leave a caption blank rather than
+inventing a specific detail (an activity, an expression, an object) you have
+no real signal for.
 
 ## Handling ambiguity
 
@@ -232,14 +248,18 @@ that claims or implies a photo shows something it doesn't.
    Call exactly one of confirmPlan, proposeAlbum, or askForClarification to
    finish each turn.
 9. You have a hard limit on how many tool calls you can make in a single
-   turn, so retrieval isn't unlimited. For a subject-based request, this
-   looks like: try a tag search (rephrasing once at most if the first
-   wording plausibly wasn't tagged), then if that's still empty, one
-   searchPhotosVisually call on the same subject as your last attempt
-   before giving up. That's it — at most 3 retrieval calls total before you
-   must call a terminal tool. If even the visual search comes back empty,
-   stop and call askForClarification explaining that nothing matched what
-   you tried, rather than attempting further variations.
+   turn, so retrieval isn't unlimited, but never call askForClarification
+   just because a tag search came back empty — searchPhotosVisually almost
+   always still needs to run first. For a subject-based request, work
+   through these in order and stop as soon as one succeeds: (a) a tag
+   search using your best-guess wording, (b) one rephrased tag search if the
+   first wording plausibly wasn't how it got tagged (a synonym, a more
+   generic word), (c) searchPhotosVisually with a plain-language description
+   of the same subject. Only after (c) also comes back empty do you stop and
+   call askForClarification — and even then, phrase it as "I looked but
+   couldn't find X" rather than asking the user to describe it differently,
+   since you already looked at the actual photos, not just tags. Never skip
+   straight to askForClarification while step (c) is still unattempted.
 
 If the request references a time period (a trip name, "last weekend", a
 season, a month), translate it into a concrete date range for

@@ -20,6 +20,7 @@ import {
   DEFAULT_CAPTION_STYLE,
   isCaptionStyle,
 } from "~/lib/ai/album-assistant";
+import { groundCaptionsInPhotos } from "~/lib/ai/caption-photos";
 import { buildDateReferenceContext } from "~/lib/ai/date-ranges";
 import {
   getAlbumAssistantFallbackModels,
@@ -188,6 +189,26 @@ export async function POST(req: Request) {
         );
       }
 
+      // The model wrote each caption above blind, from tags/date/location
+      // alone — overwrite them with captions grounded in the actual photo,
+      // using the same vision model that tags photos at upload time.
+      const groundedCaptions = await groundCaptionsInPhotos(
+        photos
+          .filter((photo): photo is AlbumDraftPhoto & { url: string } =>
+            Boolean(photo.url),
+          )
+          .map((photo) => ({
+            photoId: photo.photoId,
+            url: photo.url,
+            draftCaption: photo.caption,
+          })),
+        captionStyle,
+      );
+      for (const photo of photos) {
+        const grounded = groundedCaptions.get(photo.photoId);
+        if (grounded !== undefined) photo.caption = grounded;
+      }
+
       return { title: input.title, note: input.note, photos };
     },
   });
@@ -236,10 +257,10 @@ export async function POST(req: Request) {
       hasToolCall("confirmPlan"),
       hasToolCall("proposeAlbum"),
       hasToolCall("askForClarification"),
-      // The system prompt caps retrieval at 3 attempts before a terminal
-      // call, so this only needs to cover that plus one terminal call —
-      // kept a bit higher as a safety net for a model that overshoots.
-      stepCountIs(6),
+      // The system prompt caps retrieval at 3 attempts (tag search, one
+      // rephrase, one visual fallback) before a terminal call — kept a bit
+      // higher as a safety net for a model that overshoots.
+      stepCountIs(8),
     ],
   });
 

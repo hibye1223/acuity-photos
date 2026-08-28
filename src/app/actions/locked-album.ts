@@ -54,6 +54,9 @@ export async function setLockPin(pin: string) {
   const salt = randomBytes(16).toString("hex");
   const hash = `${salt}:${hashPin(pin, salt)}`;
 
+  const { data: whoami, error: whoamiError } =
+    await supabase.rpc("debug_whoami");
+
   const { error } = await supabase
     .from("profiles")
     .update({ lock_pin_hash: hash })
@@ -68,6 +71,9 @@ export async function setLockPin(pin: string) {
     .maybeSingle();
   console.error("[setLockPin debug]", {
     userId: user.id,
+    whoami,
+    whoamiError,
+    idsMatch: whoami === user.id,
     hashPreview: hash.slice(0, 12),
     verifyRow,
     verifyError,

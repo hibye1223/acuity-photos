@@ -54,11 +54,20 @@ export async function setLockPin(pin: string) {
   const salt = randomBytes(16).toString("hex");
   const hash = `${salt}:${hashPin(pin, salt)}`;
 
-  const { error, data } = await supabase
+  const { error, data, status, statusText } = await supabase
     .from("profiles")
     .update({ lock_pin_hash: hash })
     .eq("id", user.id)
     .select("id");
+
+  console.error("[setLockPin debug]", {
+    userId: user.id,
+    hashPreview: hash.slice(0, 12),
+    status,
+    statusText,
+    data,
+    error,
+  });
 
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) {

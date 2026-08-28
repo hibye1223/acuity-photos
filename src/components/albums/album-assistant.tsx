@@ -5,6 +5,7 @@ import { DefaultChatTransport } from "ai";
 import {
   Calendar,
   CheckCircle2,
+  Eye,
   HelpCircle,
   Loader2,
   MapPin,
@@ -162,6 +163,26 @@ function describeStep(part: unknown): StepRow | null {
     };
   }
 
+  if (p.type === "tool-searchPhotosVisually") {
+    const description =
+      typeof p.input?.description === "string"
+        ? p.input.description
+        : "what you described";
+    const streaming =
+      p.state !== "output-available" && p.state !== "output-error";
+    return {
+      key: p.toolCallId ?? p.type,
+      icon: <Eye className="size-4" />,
+      label: streaming
+        ? `Taking a closer look for "${description}"…`
+        : p.state === "output-error"
+          ? `Couldn't visually check for "${description}".`
+          : `Looked through your photos for "${description}".`,
+      done: p.state === "output-available",
+      failed: p.state === "output-error",
+    };
+  }
+
   if (p.type === "tool-confirmPlan") {
     const streaming =
       p.state !== "output-available" && p.state !== "output-error";
@@ -255,11 +276,14 @@ export function AlbumAssistant({
   examplePrompts = FALLBACK_EXAMPLE_PROMPTS,
   initialCaptionStyle = "minimal",
   initialChallengeMe = false,
+  initialPrompt = "",
   existingAlbum,
 }: {
   examplePrompts?: string[];
   initialCaptionStyle?: CaptionStyle;
   initialChallengeMe?: boolean;
+  /** Pre-fills the textarea, e.g. from a Memories "build an album" link. */
+  initialPrompt?: string;
   /** When set, the assistant edits this already-saved album instead of building a new one. */
   existingAlbum?: {
     albumId: string;
@@ -267,7 +291,7 @@ export function AlbumAssistant({
     photos: AlbumDraftPhoto[];
   };
 }) {
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [captionStyle, setCaptionStyle] =
     useState<CaptionStyle>(initialCaptionStyle);
   const [challengeMe, setChallengeMe] = useState(initialChallengeMe);

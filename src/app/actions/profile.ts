@@ -98,3 +98,35 @@ export async function updateFaceGroupingEnabled(enabled: boolean) {
   revalidatePath("/app/settings");
   revalidatePath("/app/people");
 }
+
+/**
+ * Replaces the full list of muted people — names excluded from Memories
+ * resurfacing (never from explicit Album Assistant searches, which only
+ * ever include a named person when the user asks for them by name).
+ */
+export async function updateMutedPeople(names: string[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to update this setting.");
+  }
+
+  const trimmed = [
+    ...new Set(names.map((name) => name.trim().toLowerCase()).filter(Boolean)),
+  ];
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ muted_people: trimmed })
+    .eq("id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app/create");
+}

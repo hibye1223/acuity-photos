@@ -9,10 +9,12 @@ export function AlbumBuilderSection({
   examplePrompts,
   initialCaptionStyle,
   initialChallengeMe,
+  initialPrompt,
 }: {
   examplePrompts: string[];
   initialCaptionStyle: CaptionStyle;
   initialChallengeMe: boolean;
+  initialPrompt?: string;
 }) {
   const [mode, setMode] = useState<"ai" | "blank">("ai");
 
@@ -43,6 +45,7 @@ export function AlbumBuilderSection({
           examplePrompts={examplePrompts}
           initialCaptionStyle={initialCaptionStyle}
           initialChallengeMe={initialChallengeMe}
+          initialPrompt={initialPrompt}
         />
       ) : (
         <BlankAlbumEditor onDiscard={() => setMode("ai")} />

@@ -1,4 +1,4 @@
-import { DollarSign } from "lucide-react";
+import { DollarSign, Lock } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "~/app/actions/auth";
 import { ThemeToggle } from "~/components/theme-toggle";
@@ -50,6 +50,17 @@ export async function Navbar() {
                   <Link href="/app/people">People</Link>
                 </Button>
               ) : null}
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                aria-label="Locked album"
+                title="Locked album"
+              >
+                <Link href="/app/locked">
+                  <Lock className="size-4" />
+                </Link>
+              </Button>
               {isAdmin ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/app/admin">Admin</Link>

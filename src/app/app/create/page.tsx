@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { getMemories } from "~/app/actions/memories";
 import { AlbumBuilderSection } from "~/components/albums/album-builder-section";
+import { MemoriesSection } from "~/components/memories/memories-section";
 import { PhotoUploader } from "~/components/photos/photo-uploader";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -15,24 +17,31 @@ import {
 } from "~/lib/storage-quota";
 import { createClient } from "~/lib/supabase/server";
 
-export default async function CreatePage() {
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prompt?: string }>;
+}) {
+  const { prompt: initialPrompt } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [usedBytes, limitBytes, examplePrompts, profile] = await Promise.all([
-    getUsedStorageBytes(supabase),
-    getStorageLimitBytes(supabase),
-    getExamplePrompts(supabase),
-    user
-      ? supabase
-          .from("profiles")
-          .select("default_caption_style, challenge_me")
-          .eq("id", user.id)
-          .single()
-          .then((result) => result.data)
-      : Promise.resolve(null),
-  ]);
+  const [usedBytes, limitBytes, examplePrompts, profile, memories] =
+    await Promise.all([
+      getUsedStorageBytes(supabase),
+      getStorageLimitBytes(supabase),
+      getExamplePrompts(supabase),
+      user
+        ? supabase
+            .from("profiles")
+            .select("default_caption_style, challenge_me")
+            .eq("id", user.id)
+            .single()
+            .then((result) => result.data)
+        : Promise.resolve(null),
+      user ? getMemories() : Promise.resolve(null),
+    ]);
   const initialCaptionStyle = isCaptionStyle(profile?.default_caption_style)
     ? profile.default_caption_style
     : DEFAULT_CAPTION_STYLE;
@@ -56,10 +65,13 @@ export default async function CreatePage() {
         </div>
       </div>
 
+      {memories ? <MemoriesSection memories={memories} /> : null}
+
       <AlbumBuilderSection
         examplePrompts={examplePrompts}
         initialCaptionStyle={initialCaptionStyle}
         initialChallengeMe={profile?.challenge_me ?? false}
+        initialPrompt={initialPrompt}
       />
 
       <Separator />

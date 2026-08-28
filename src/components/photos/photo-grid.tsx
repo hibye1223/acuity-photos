@@ -1,9 +1,17 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  Trash2,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { setPhotoLocked } from "~/app/actions/locked-album";
 import { deletePhotos } from "~/app/actions/photos";
 import {
   AlertDialog,
@@ -54,6 +62,8 @@ export function PhotoGrid({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
 
   function navigate(next: { sort?: SortOption; page?: number }) {
     const params = new URLSearchParams(searchParams);
@@ -116,6 +126,23 @@ export function PhotoGrid({
       router.refresh();
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function handleLockActive() {
+    if (!active) return;
+    setIsLocking(true);
+    setLockError(null);
+    try {
+      await setPhotoLocked(active.id, true);
+      close();
+      router.refresh();
+    } catch (err) {
+      setLockError(
+        err instanceof Error ? err.message : "Something went wrong.",
+      );
+    } finally {
+      setIsLocking(false);
     }
   }
 
@@ -297,6 +324,29 @@ export function PhotoGrid({
           >
             <X className="size-6" />
           </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleLockActive();
+            }}
+            disabled={isLocking}
+            className="absolute right-28 top-4 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label="Move to locked album"
+            title="Move to locked album"
+          >
+            <Lock className="size-6" />
+          </button>
+
+          {lockError ? (
+            <p
+              role="alert"
+              className="absolute right-4 top-16 max-w-xs rounded-md bg-destructive/90 px-3 py-2 text-xs text-white"
+            >
+              {lockError}
+            </p>
+          ) : null}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>

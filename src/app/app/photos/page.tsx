@@ -34,7 +34,8 @@ export default async function PhotosPage({
     .from("photos")
     .select("id, storage_path, file_name, taken_at, created_at", {
       count: "exact",
-    });
+    })
+    .eq("is_locked", false);
 
   if (sort === "oldest") {
     query = query

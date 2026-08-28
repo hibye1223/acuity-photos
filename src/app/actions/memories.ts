@@ -100,14 +100,18 @@ export async function getMemories(): Promise<Memories> {
     target.setUTCFullYear(target.getUTCFullYear() - yearsAgo);
     const { start, end } = dayRange(target);
 
+    // Falls back to created_at for photos with no EXIF-derived taken_at
+    // (screenshots, most non-camera uploads) — otherwise they'd never
+    // surface here at all, same fallback the gallery's default sort uses.
     const query = supabase
       .from("photos")
       .select("id, file_name, storage_path, taken_at, people")
       .eq("user_id", user.id)
       .eq("is_locked", false)
-      .gte("taken_at", start)
-      .lte("taken_at", end)
-      .order("taken_at", { ascending: false })
+      .or(
+        `and(taken_at.gte.${start},taken_at.lte.${end}),and(taken_at.is.null,created_at.gte.${start},created_at.lte.${end})`,
+      )
+      .order("taken_at", { ascending: false, nullsFirst: false })
       .limit(12);
 
     const { data: rows } = await query;
@@ -128,8 +132,10 @@ export async function getMemories(): Promise<Memories> {
     .select("id, file_name, storage_path, taken_at, people")
     .eq("user_id", user.id)
     .eq("is_locked", false)
-    .gte("taken_at", windowStart)
-    .order("taken_at", { ascending: false })
+    .or(
+      `taken_at.gte.${windowStart},and(taken_at.is.null,created_at.gte.${windowStart})`,
+    )
+    .order("taken_at", { ascending: false, nullsFirst: false })
     .limit(30);
 
   const filteredRecent = (recentRows ?? []).filter(

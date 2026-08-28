@@ -54,12 +54,16 @@ export async function setLockPin(pin: string) {
   const salt = randomBytes(16).toString("hex");
   const hash = `${salt}:${hashPin(pin, salt)}`;
 
-  const { error } = await supabase
+  const { error, data } = await supabase
     .from("profiles")
     .update({ lock_pin_hash: hash })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id");
 
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error("Couldn't save the PIN — no profile row was updated.");
+  }
   revalidatePath("/app/settings");
 }
 

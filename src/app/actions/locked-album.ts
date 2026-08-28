@@ -60,23 +60,6 @@ export async function setLockPin(pin: string) {
     .eq("id", user.id);
 
   if (error) throw new Error(error.message);
-
-  const { data: verifyRow, error: verifyError } = await supabase
-    .from("profiles")
-    .select("lock_pin_hash")
-    .eq("id", user.id)
-    .single();
-
-  console.error("[setLockPin debug]", {
-    userId: user.id,
-    hashPreview: hash.slice(0, 12),
-    verifyRow,
-    verifyError,
-  });
-
-  if (verifyError || verifyRow?.lock_pin_hash !== hash) {
-    throw new Error("Couldn't save the PIN — the write didn't take.");
-  }
   revalidatePath("/app/settings");
 }
 

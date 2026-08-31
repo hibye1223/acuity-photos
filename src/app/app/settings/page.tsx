@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
-import { hasLockPin } from "~/app/actions/locked-album";
 import { AiPreferencesForm } from "~/components/account/ai-preferences-form";
 import { ChangePasswordForm } from "~/components/account/change-password-form";
 import { DeleteAccountButton } from "~/components/account/delete-account-button";
-import { LockedAlbumSettings } from "~/components/account/locked-album-settings";
 import { MutedPeopleForm } from "~/components/account/muted-people-form";
 import { PlanCard } from "~/components/account/plan-card";
 import { ProfileForm } from "~/components/account/profile-form";
@@ -40,13 +38,10 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .single();
 
-  const [storageUsedBytes, storageLimitBytes, lockPinIsSet] = await Promise.all(
-    [
-      getUsedStorageBytes(supabase),
-      getStorageLimitBytes(supabase),
-      hasLockPin(),
-    ],
-  );
+  const [storageUsedBytes, storageLimitBytes] = await Promise.all([
+    getUsedStorageBytes(supabase),
+    getStorageLimitBytes(supabase),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-16">
@@ -127,18 +122,6 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <MutedPeopleForm initialMutedPeople={profile?.muted_people ?? []} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Locked album</CardTitle>
-          <CardDescription>
-            A separate, PIN-gated space for private photos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LockedAlbumSettings initialHasPin={lockPinIsSet} />
         </CardContent>
       </Card>
 

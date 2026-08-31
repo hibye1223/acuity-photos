@@ -9,7 +9,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 export function LockedAlbumView() {
-  const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [photos, setPhotos] = useState<LockedPhoto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,9 +19,9 @@ export function LockedAlbumView() {
     setLoading(true);
     setError(null);
     try {
-      const result = await unlockLockedAlbum(pin);
+      const result = await unlockLockedAlbum(password);
       setPhotos(result);
-      setPin("");
+      setPassword("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -46,25 +46,24 @@ export function LockedAlbumView() {
       <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border py-20 text-center">
         <Lock className="size-8 text-muted-foreground" />
         <p className="text-muted-foreground">
-          Enter your PIN to view this album.
+          Enter your account password to view this album.
         </p>
         <div className="flex gap-2">
           <Input
             type="password"
-            inputMode="numeric"
-            value={pin}
-            onChange={(event) => setPin(event.target.value)}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") handleUnlock();
             }}
-            placeholder="PIN"
-            className="w-32"
+            placeholder="Password"
+            className="w-48"
             autoFocus
           />
           <Button
             type="button"
             onClick={handleUnlock}
-            disabled={loading || !pin}
+            disabled={loading || !password}
           >
             Unlock
           </Button>

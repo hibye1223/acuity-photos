@@ -1,25 +1,17 @@
 "use server";
 
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { env } from "~/env";
 import { createClient } from "~/lib/supabase/server";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 30;
-const SCRYPT_KEY_LENGTH = 32;
 
 export type LockedPhoto = {
   id: string;
   fileName: string;
   url: string | null;
 };
-
-function hashPin(pin: string, salt: string): string {
-  return scryptSync(pin, salt, SCRYPT_KEY_LENGTH).toString("hex");
-}
-
-function isValidPin(pin: string): boolean {
-  return /^\d{4,10}$/.test(pin);
-}
 
 async function requireUser() {
   const supabase = await createClient();
@@ -32,97 +24,30 @@ async function requireUser() {
   return { supabase, user };
 }
 
-/** Whether the user has already set up a locked-album PIN. */
-export async function hasLockPin(): Promise<boolean> {
-  const { supabase, user } = await requireUser();
-  const { data } = await supabase
-    .from("profiles")
-    .select("lock_pin_hash")
-    .eq("id", user.id)
-    .single();
-  return !!data?.lock_pin_hash;
-}
-
-/** Sets or changes the PIN that gates the locked album. A 4-10 digit code. */
-export async function setLockPin(pin: string) {
-  const { supabase, user } = await requireUser();
-
-  if (!isValidPin(pin)) {
-    throw new Error("PIN must be 4-10 digits.");
-  }
-
-  const salt = randomBytes(16).toString("hex");
-  const hash = `${salt}:${hashPin(pin, salt)}`;
-
-  const { data: whoami, error: whoamiError } =
-    await supabase.rpc("debug_whoami");
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({ lock_pin_hash: hash })
-    .eq("id", user.id);
-
-  if (error) throw new Error(error.message);
-
-  const { data: verifyRow, error: verifyError } = await supabase
-    .from("profiles")
-    .select("lock_pin_hash")
-    .eq("id", user.id)
-    .maybeSingle();
-  console.error("[setLockPin debug]", {
-    userId: user.id,
-    whoami,
-    whoamiError,
-    idsMatch: whoami === user.id,
-    hashPreview: hash.slice(0, 12),
-    verifyRow,
-    verifyError,
-  });
-
-  revalidatePath("/app/settings");
-}
-
 /**
- * Removes the PIN and unlocks every photo, since there'd otherwise be no way
- * back into a locked album with no PIN set.
+ * Checks a password against the signed-in user's own account credentials,
+ * via a throwaway, cookie-less client — this never touches or rotates the
+ * caller's real session, it just asks Supabase Auth "does this password
+ * match this email".
  */
-export async function removeLockPin() {
-  const { supabase, user } = await requireUser();
-
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ lock_pin_hash: null })
-    .eq("id", user.id);
-  if (profileError) throw new Error(profileError.message);
-
-  const { error: photosError } = await supabase
-    .from("photos")
-    .update({ is_locked: false })
-    .eq("user_id", user.id)
-    .eq("is_locked", true);
-  if (photosError) throw new Error(photosError.message);
-
-  revalidatePath("/app/settings");
-  revalidatePath("/app/photos");
-  revalidatePath("/app/locked");
+async function verifyOwnPassword(
+  email: string,
+  password: string,
+): Promise<boolean> {
+  const verifier = createSupabaseClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+  const { error } = await verifier.auth.signInWithPassword({
+    email,
+    password,
+  });
+  return !error;
 }
 
-/** Locks or unlocks a single photo. Locking requires a PIN to already be set. */
+/** Locks or unlocks a single photo. */
 export async function setPhotoLocked(photoId: string, locked: boolean) {
   const { supabase, user } = await requireUser();
-
-  if (locked) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("lock_pin_hash")
-      .eq("id", user.id)
-      .single();
-    if (!profile?.lock_pin_hash) {
-      throw new Error(
-        "Set a PIN in Settings first, under Locked Album, before locking a photo.",
-      );
-    }
-  }
 
   const { error } = await supabase
     .from("photos")
@@ -136,35 +61,22 @@ export async function setPhotoLocked(photoId: string, locked: boolean) {
 }
 
 /**
- * Verifies the PIN and, if correct, returns every locked photo. Deliberately
- * combines verification and listing in one call so there's no separate
- * "unlocked" session to track — the locked album re-gates on every visit.
+ * Verifies the user's account password and, if correct, returns every
+ * locked photo. Re-checks the password on every visit rather than keeping
+ * a separate "unlocked" session.
  */
-export async function unlockLockedAlbum(pin: string): Promise<LockedPhoto[]> {
+export async function unlockLockedAlbum(
+  password: string,
+): Promise<LockedPhoto[]> {
   const { supabase, user } = await requireUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("lock_pin_hash")
-    .eq("id", user.id)
-    .single();
-
-  const storedHash = profile?.lock_pin_hash;
-  if (!storedHash) {
-    throw new Error("Set a PIN in Settings first, under Locked Album.");
+  if (!user.email) {
+    throw new Error("Your account has no email on file.");
   }
 
-  const [salt, expectedHex] = storedHash.split(":");
-  if (!salt || !expectedHex) {
-    throw new Error("Incorrect PIN.");
-  }
-  const expected = Buffer.from(expectedHex, "hex");
-  const actual = Buffer.from(hashPin(pin, salt), "hex");
-  const matches =
-    expected.length === actual.length && timingSafeEqual(expected, actual);
-
+  const matches = await verifyOwnPassword(user.email, password);
   if (!matches) {
-    throw new Error("Incorrect PIN.");
+    throw new Error("Incorrect password.");
   }
 
   const { data: photos, error } = await supabase

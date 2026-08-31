@@ -72,18 +72,6 @@ export async function updateAiPreferences({
     throw new Error(error.message);
   }
 
-  const { data: verifyRow, error: verifyError } = await supabase
-    .from("profiles")
-    .select("challenge_me")
-    .eq("id", user.id)
-    .maybeSingle();
-  console.error("[updateAiPreferences debug]", {
-    userId: user.id,
-    wroteChallengeMe: challengeMe,
-    verifyRow,
-    verifyError,
-  });
-
   revalidatePath("/app/create");
   revalidatePath("/app/settings");
 }

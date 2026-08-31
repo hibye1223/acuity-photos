@@ -35,9 +35,10 @@ export default async function PhotosPage({
 
   let query = supabase
     .from("photos")
-    .select("id, storage_path, file_name, taken_at, created_at, is_favorite", {
-      count: "exact",
-    })
+    .select(
+      "id, storage_path, file_name, taken_at, created_at, is_favorite, original_storage_path",
+      { count: "exact" },
+    )
     .eq("is_locked", false)
     .is("deleted_at", null);
 
@@ -87,6 +88,9 @@ export default async function PhotosPage({
       fileName: photo.file_name,
       date: photo.taken_at ?? photo.created_at,
       isFavorite: photo.is_favorite,
+      isEdited:
+        !!photo.original_storage_path &&
+        photo.original_storage_path !== photo.storage_path,
     }))
     .filter((photo): photo is GalleryPhoto => photo.url !== undefined);
 

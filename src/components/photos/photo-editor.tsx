@@ -7,11 +7,32 @@ import { savePhotoEdit } from "~/app/actions/photos";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/client";
 import { uploadPhotoWithProgress } from "~/lib/upload-with-progress";
+import { cn } from "~/lib/utils";
 
 type Crop = { x: number; y: number; width: number; height: number };
+type Corner = "tl" | "tr" | "bl" | "br";
 
 const HANDLE_SIZE = 14;
 const MIN_CROP_SIZE = 40;
+const CORNERS: Corner[] = ["tl", "tr", "bl", "br"];
+
+/**
+ * The corner opposite `corner` on a rect acts as the fixed anchor while
+ * resizing; the dragged corner moves freely.
+ */
+function anchorPoint(origin: Crop, corner: Corner): { x: number; y: number } {
+  return {
+    x: corner === "tl" || corner === "bl" ? origin.x + origin.width : origin.x,
+    y: corner === "tl" || corner === "tr" ? origin.y + origin.height : origin.y,
+  };
+}
+
+function draggedPoint(origin: Crop, corner: Corner): { x: number; y: number } {
+  return {
+    x: corner === "tl" || corner === "bl" ? origin.x : origin.x + origin.width,
+    y: corner === "tl" || corner === "tr" ? origin.y : origin.y + origin.height,
+  };
+}
 
 /** Draws the source image rotated/flipped onto a canvas sized to match. */
 function buildWorkingCanvas(
@@ -129,6 +150,7 @@ export function PhotoEditor({
   function startDrag(
     event: ReactPointerEvent<HTMLDivElement>,
     mode: "move" | "resize",
+    corner?: Corner,
   ) {
     event.preventDefault();
     event.stopPropagation();
@@ -145,14 +167,22 @@ export function PhotoEditor({
       const dx = (moveEvent.clientX - startX) / displayScale;
       const dy = (moveEvent.clientY - startY) / displayScale;
 
-      const next =
-        mode === "move"
-          ? { ...origin, x: origin.x + dx, y: origin.y + dy }
-          : {
-              ...origin,
-              width: origin.width + dx,
-              height: origin.height + dy,
-            };
+      let next: Crop;
+      if (mode === "move") {
+        next = { ...origin, x: origin.x + dx, y: origin.y + dy };
+      } else {
+        const activeCorner = corner ?? "br";
+        const anchor = anchorPoint(origin, activeCorner);
+        const dragged = draggedPoint(origin, activeCorner);
+        const movedX = dragged.x + dx;
+        const movedY = dragged.y + dy;
+        next = {
+          x: Math.min(anchor.x, movedX),
+          y: Math.min(anchor.y, movedY),
+          width: Math.abs(movedX - anchor.x),
+          height: Math.abs(movedY - anchor.y),
+        };
+      }
 
       setCrop(clampCrop(next, working));
     }
@@ -284,11 +314,20 @@ export function PhotoEditor({
               }}
               onPointerDown={(event) => startDrag(event, "move")}
             >
-              <div
-                onPointerDown={(event) => startDrag(event, "resize")}
-                className="absolute -bottom-2 -right-2 rounded-full border-2 border-white bg-black/60"
-                style={{ width: HANDLE_SIZE, height: HANDLE_SIZE }}
-              />
+              {CORNERS.map((corner) => (
+                <div
+                  key={corner}
+                  onPointerDown={(event) => startDrag(event, "resize", corner)}
+                  className={cn(
+                    "absolute rounded-full border-2 border-white bg-black/60",
+                    corner === "tl" && "-left-2 -top-2 cursor-nwse-resize",
+                    corner === "tr" && "-right-2 -top-2 cursor-nesw-resize",
+                    corner === "bl" && "-bottom-2 -left-2 cursor-nesw-resize",
+                    corner === "br" && "-bottom-2 -right-2 cursor-nwse-resize",
+                  )}
+                  style={{ width: HANDLE_SIZE, height: HANDLE_SIZE }}
+                />
+              ))}
             </div>
           ) : null}
         </div>

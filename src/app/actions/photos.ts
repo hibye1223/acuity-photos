@@ -262,7 +262,9 @@ export async function savePhotoEdit({
 
   const { data: existing, error: selectError } = await supabase
     .from("photos")
-    .select("storage_path")
+    .select(
+      "storage_path, content_type, size_bytes, original_storage_path, original_content_type, original_size_bytes",
+    )
     .eq("id", photoId)
     .maybeSingle();
 
@@ -273,12 +275,25 @@ export async function savePhotoEdit({
     throw new Error("That photo no longer exists.");
   }
 
+  // The first time a photo is edited, snapshot its current (pristine)
+  // storage object/metadata so it can always be reverted to later. Once
+  // set, this snapshot is never overwritten by later edits.
+  const isFirstEdit = !existing.original_storage_path;
+  const protectedPath = existing.original_storage_path ?? existing.storage_path;
+
   const { error: updateError } = await supabase
     .from("photos")
     .update({
       storage_path: storagePath,
       content_type: contentType,
       size_bytes: sizeBytes,
+      ...(isFirstEdit
+        ? {
+            original_storage_path: existing.storage_path,
+            original_content_type: existing.content_type,
+            original_size_bytes: existing.size_bytes,
+          }
+        : {}),
     })
     .eq("id", photoId);
 
@@ -289,7 +304,68 @@ export async function savePhotoEdit({
     throw new Error(updateError.message);
   }
 
-  await supabase.storage.from("photos").remove([existing.storage_path]);
+  // Only remove the object the row previously pointed at if it isn't the
+  // protected original (e.g. re-editing an already-edited photo removes the
+  // prior edited object, but the pristine original is kept forever).
+  if (existing.storage_path !== protectedPath) {
+    await supabase.storage.from("photos").remove([existing.storage_path]);
+  }
+
+  revalidatePath("/app/photos");
+  revalidatePath("/app/albums");
+}
+
+/**
+ * Reverts a photo back to the pristine version saved before its first edit.
+ * Available any number of times, since the original is never overwritten.
+ */
+export async function revertPhotoEdit(photoId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to edit photos.");
+  }
+
+  const { data: existing, error: selectError } = await supabase
+    .from("photos")
+    .select(
+      "storage_path, original_storage_path, original_content_type, original_size_bytes",
+    )
+    .eq("id", photoId)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(selectError.message);
+  }
+  if (!existing) {
+    throw new Error("That photo no longer exists.");
+  }
+  if (!existing.original_storage_path) {
+    throw new Error("This photo hasn't been edited.");
+  }
+  if (existing.storage_path === existing.original_storage_path) {
+    return;
+  }
+
+  const editedStoragePath = existing.storage_path;
+
+  const { error: updateError } = await supabase
+    .from("photos")
+    .update({
+      storage_path: existing.original_storage_path,
+      content_type: existing.original_content_type,
+      size_bytes: existing.original_size_bytes,
+    })
+    .eq("id", photoId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  await supabase.storage.from("photos").remove([editedStoragePath]);
 
   revalidatePath("/app/photos");
   revalidatePath("/app/albums");

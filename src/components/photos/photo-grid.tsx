@@ -8,13 +8,18 @@ import {
   Pencil,
   Star,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { setPhotoLocked } from "~/app/actions/locked-album";
-import { deletePhotos, toggleFavorite } from "~/app/actions/photos";
+import {
+  deletePhotos,
+  revertPhotoEdit,
+  toggleFavorite,
+} from "~/app/actions/photos";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +48,7 @@ export type GalleryPhoto = {
   fileName: string;
   date: string;
   isFavorite: boolean;
+  isEdited: boolean;
 };
 
 export type SortOption = "newest" | "oldest" | "name";
@@ -70,6 +76,7 @@ export function PhotoGrid({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
+  const [isReverting, setIsReverting] = useState(false);
   const [lockError, setLockError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -185,6 +192,17 @@ export function PhotoGrid({
       router.refresh();
     } finally {
       setIsFavoriting(false);
+    }
+  }
+
+  async function handleRevertActive() {
+    if (!active) return;
+    setIsReverting(true);
+    try {
+      await revertPhotoEdit(active.id);
+      router.refresh();
+    } finally {
+      setIsReverting(false);
     }
   }
 
@@ -439,6 +457,22 @@ export function PhotoGrid({
           >
             <Pencil className="size-6" />
           </button>
+
+          {active.isEdited ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleRevertActive();
+              }}
+              disabled={isReverting}
+              className="absolute right-64 top-4 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+              aria-label="Revert to original"
+              title="Revert to original"
+            >
+              <Undo2 className="size-6" />
+            </button>
+          ) : null}
 
           <button
             type="button"

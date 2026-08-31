@@ -154,6 +154,7 @@ export async function POST(req: Request) {
         .from("photos")
         .select("id, storage_path, file_name")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .in("id", photoIds);
       if (error) throw new Error(error.message);
 

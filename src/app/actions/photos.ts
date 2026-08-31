@@ -100,7 +100,66 @@ export async function createPhotoRecord({
   }
 }
 
+/** Moves photos to the trash. Storage objects are untouched until purged. */
 export async function deletePhotos(photoIds: string[]) {
+  if (photoIds.length === 0) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to delete photos.");
+  }
+
+  const { error } = await supabase
+    .from("photos")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", photoIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/photos");
+  revalidatePath("/app/albums");
+  revalidatePath("/app/trash");
+}
+
+/** Brings trashed photos back into the main gallery. */
+export async function restorePhotos(photoIds: string[]) {
+  if (photoIds.length === 0) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to restore photos.");
+  }
+
+  const { error } = await supabase
+    .from("photos")
+    .update({ deleted_at: null })
+    .in("id", photoIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/photos");
+  revalidatePath("/app/albums");
+  revalidatePath("/app/trash");
+}
+
+/**
+ * Permanently deletes trashed photos: removes the Storage objects and the
+ * rows. Only ever called from the trash page — this is the real,
+ * unrecoverable delete.
+ */
+export async function permanentlyDeletePhotos(photoIds: string[]) {
   if (photoIds.length === 0) return;
 
   const supabase = await createClient();
@@ -114,11 +173,12 @@ export async function deletePhotos(photoIds: string[]) {
 
   // RLS already scopes this to the signed-in user's own rows, but selecting
   // first (rather than trusting the client-supplied ids) confirms exactly
-  // which storage objects to remove.
+  // which storage objects to remove, and that they're actually in the trash.
   const { data: photos, error: selectError } = await supabase
     .from("photos")
     .select("id, storage_path")
-    .in("id", photoIds);
+    .in("id", photoIds)
+    .not("deleted_at", "is", null);
 
   if (selectError) {
     throw new Error(selectError.message);
@@ -145,6 +205,91 @@ export async function deletePhotos(photoIds: string[]) {
   if (deleteError) {
     throw new Error(deleteError.message);
   }
+
+  revalidatePath("/app/trash");
+}
+
+export async function toggleFavorite(photoId: string, favorite: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to favorite photos.");
+  }
+
+  const { error } = await supabase
+    .from("photos")
+    .update({ is_favorite: favorite })
+    .eq("id", photoId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/photos");
+}
+
+/**
+ * Saves an edited version of a photo: uploads the edited bytes as a new
+ * Storage object, repoints the row at it, and removes the old object. The
+ * row id (and therefore album membership, tags, etc.) is preserved.
+ */
+export async function savePhotoEdit({
+  photoId,
+  storagePath,
+  contentType,
+  sizeBytes,
+}: {
+  photoId: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to edit photos.");
+  }
+
+  if (!storagePath.startsWith(`${user.id}/`)) {
+    throw new Error("Invalid storage path.");
+  }
+
+  const { data: existing, error: selectError } = await supabase
+    .from("photos")
+    .select("storage_path")
+    .eq("id", photoId)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(selectError.message);
+  }
+  if (!existing) {
+    throw new Error("That photo no longer exists.");
+  }
+
+  const { error: updateError } = await supabase
+    .from("photos")
+    .update({
+      storage_path: storagePath,
+      content_type: contentType,
+      size_bytes: sizeBytes,
+    })
+    .eq("id", photoId);
+
+  if (updateError) {
+    // Clean up the new object we just uploaded, since the row still points
+    // at the old one.
+    await supabase.storage.from("photos").remove([storagePath]);
+    throw new Error(updateError.message);
+  }
+
+  await supabase.storage.from("photos").remove([existing.storage_path]);
 
   revalidatePath("/app/photos");
   revalidatePath("/app/albums");

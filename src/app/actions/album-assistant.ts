@@ -44,6 +44,7 @@ export async function listPhotosForPickerAction(): Promise<PickerPhoto[]> {
     .from("photos")
     .select("id, storage_path, file_name")
     .eq("user_id", user.id)
+    .is("deleted_at", null)
     .order("taken_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(200);

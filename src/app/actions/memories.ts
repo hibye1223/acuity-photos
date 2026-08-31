@@ -108,6 +108,7 @@ export async function getMemories(): Promise<Memories> {
       .select("id, file_name, storage_path, taken_at, people")
       .eq("user_id", user.id)
       .eq("is_locked", false)
+      .is("deleted_at", null)
       .or(
         `and(taken_at.gte.${start},taken_at.lte.${end}),and(taken_at.is.null,created_at.gte.${start},created_at.lte.${end})`,
       )
@@ -132,6 +133,7 @@ export async function getMemories(): Promise<Memories> {
     .select("id, file_name, storage_path, taken_at, people")
     .eq("user_id", user.id)
     .eq("is_locked", false)
+    .is("deleted_at", null)
     .or(
       `taken_at.gte.${windowStart},and(taken_at.is.null,created_at.gte.${windowStart})`,
     )

@@ -32,7 +32,7 @@ export default async function EditAlbumPage({
   const { data: album, error } = await supabase
     .from("albums")
     .select(
-      "id, title, album_photos(photo_id, position, caption, photos(storage_path, file_name))",
+      "id, title, album_photos(photo_id, position, caption, photos(storage_path, file_name, deleted_at))",
     )
     .eq("id", id)
     .order("position", { referencedTable: "album_photos", ascending: true })
@@ -41,7 +41,13 @@ export default async function EditAlbumPage({
   if (error) throw new Error(error.message);
   if (!album) notFound();
 
-  const paths = album.album_photos
+  // A trashed photo disappears from the album right away, without waiting
+  // for it to be purged.
+  const visiblePhotos = album.album_photos.filter(
+    (entry) => !toOne(entry.photos)?.deleted_at,
+  );
+
+  const paths = visiblePhotos
     .map((entry) => toOne(entry.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
@@ -57,7 +63,7 @@ export default async function EditAlbumPage({
       .map((entry) => [entry.path as string, entry.signedUrl]),
   );
 
-  const initialPhotos: AlbumDraftPhoto[] = album.album_photos.map((entry) => {
+  const initialPhotos: AlbumDraftPhoto[] = visiblePhotos.map((entry) => {
     const photo = toOne(entry.photos);
     return {
       photoId: entry.photo_id,

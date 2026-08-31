@@ -57,6 +57,7 @@ export async function suggestPeopleGroups(): Promise<PeopleGroupSuggestion[]> {
     .select("id, storage_path, person_description")
     .eq("user_id", user.id)
     .eq("is_locked", false)
+    .is("deleted_at", null)
     .not("person_description", "is", null)
     .or("people.is.null,people.eq.{}")
     .order("taken_at", { ascending: false, nullsFirst: false })

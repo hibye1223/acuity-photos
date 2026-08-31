@@ -40,7 +40,8 @@ export async function saveAlbumAction(input: SaveAlbumInput) {
   const { data: ownedPhotos, error: ownedError } = await supabase
     .from("photos")
     .select("id")
-    .in("id", photoIds);
+    .in("id", photoIds)
+    .is("deleted_at", null);
 
   if (ownedError) throw new Error(ownedError.message);
 
@@ -123,7 +124,8 @@ export async function updateAlbumAction(input: UpdateAlbumInput) {
   const { data: ownedPhotos, error: ownedError } = await supabase
     .from("photos")
     .select("id")
-    .in("id", photoIds);
+    .in("id", photoIds)
+    .is("deleted_at", null);
 
   if (ownedError) throw new Error(ownedError.message);
 

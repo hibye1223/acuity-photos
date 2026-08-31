@@ -20,7 +20,7 @@ export default async function AlbumDetailPage({
   const { data: album, error } = await supabase
     .from("albums")
     .select(
-      "id, title, created_at, share_enabled, share_token, album_photos(photo_id, position, caption, photos(storage_path, file_name))",
+      "id, title, created_at, share_enabled, share_token, album_photos(photo_id, position, caption, photos(storage_path, file_name, deleted_at))",
     )
     .eq("id", id)
     .order("position", { referencedTable: "album_photos", ascending: true })
@@ -29,7 +29,13 @@ export default async function AlbumDetailPage({
   if (error) throw new Error(error.message);
   if (!album) notFound();
 
-  const paths = album.album_photos
+  // A trashed photo disappears from albums right away, without waiting for
+  // it to be purged.
+  const visiblePhotos = album.album_photos.filter(
+    (entry) => !toOne(entry.photos)?.deleted_at,
+  );
+
+  const paths = visiblePhotos
     .map((entry) => toOne(entry.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
@@ -67,7 +73,7 @@ export default async function AlbumDetailPage({
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
-        {album.album_photos.map((entry) => {
+        {visiblePhotos.map((entry) => {
           const photo = toOne(entry.photos);
           const url = photo?.storage_path
             ? urlByPath.get(photo.storage_path)

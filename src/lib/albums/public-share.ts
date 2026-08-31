@@ -29,7 +29,7 @@ export async function getSharedAlbum(
   const { data: album, error } = await admin
     .from("albums")
     .select(
-      "title, album_photos(photo_id, position, caption, photos(storage_path, file_name))",
+      "title, album_photos(photo_id, position, caption, photos(storage_path, file_name, deleted_at))",
     )
     .eq("share_token", shareToken)
     .eq("share_enabled", true)
@@ -38,7 +38,13 @@ export async function getSharedAlbum(
 
   if (error || !album) return null;
 
-  const paths = album.album_photos
+  // A trashed photo disappears from the public share right away, without
+  // waiting for it to be purged.
+  const visiblePhotos = album.album_photos.filter(
+    (entry) => !toOne(entry.photos)?.deleted_at,
+  );
+
+  const paths = visiblePhotos
     .map((entry) => toOne(entry.photos)?.storage_path)
     .filter((path): path is string => !!path);
 
@@ -56,7 +62,7 @@ export async function getSharedAlbum(
 
   return {
     title: album.title,
-    photos: album.album_photos.map((entry) => {
+    photos: visiblePhotos.map((entry) => {
       const photo = toOne(entry.photos);
       return {
         photoId: entry.photo_id,

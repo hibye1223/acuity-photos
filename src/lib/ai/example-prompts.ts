@@ -17,6 +17,7 @@ export async function getExamplePrompts(
   const { data, error } = await supabase
     .from("photos")
     .select("tags, location")
+    .is("deleted_at", null)
     .limit(300);
 
   if (error || !data || data.length === 0) return FALLBACK_PROMPTS;

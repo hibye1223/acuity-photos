@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
+  Pencil,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -12,7 +14,7 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { setPhotoLocked } from "~/app/actions/locked-album";
-import { deletePhotos } from "~/app/actions/photos";
+import { deletePhotos, toggleFavorite } from "~/app/actions/photos";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,12 +35,14 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { cn } from "~/lib/utils";
+import { PhotoEditor } from "./photo-editor";
 
 export type GalleryPhoto = {
   id: string;
   url: string;
   fileName: string;
   date: string;
+  isFavorite: boolean;
 };
 
 export type SortOption = "newest" | "oldest" | "name";
@@ -48,11 +52,13 @@ export function PhotoGrid({
   sort,
   page,
   totalPages,
+  favoritesOnly,
 }: {
   photos: GalleryPhoto[];
   sort: SortOption;
   page: number;
   totalPages: number;
+  favoritesOnly: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -63,12 +69,25 @@ export function PhotoGrid({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
+  const [isFavoriting, setIsFavoriting] = useState(false);
   const [lockError, setLockError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  function navigate(next: { sort?: SortOption; page?: number }) {
+  function navigate(next: {
+    sort?: SortOption;
+    page?: number;
+    favorites?: boolean;
+  }) {
     const params = new URLSearchParams(searchParams);
     if (next.sort) params.set("sort", next.sort);
     if (next.page) params.set("page", String(next.page));
+    if (next.favorites !== undefined) {
+      if (next.favorites) {
+        params.set("favorites", "1");
+      } else {
+        params.delete("favorites");
+      }
+    }
     router.push(`${pathname}?${params.toString()}`);
   }
 
@@ -158,6 +177,22 @@ export function PhotoGrid({
     }
   }
 
+  async function handleToggleFavoriteActive() {
+    if (!active) return;
+    setIsFavoriting(true);
+    try {
+      await toggleFavorite(active.id, !active.isFavorite);
+      router.refresh();
+    } finally {
+      setIsFavoriting(false);
+    }
+  }
+
+  async function handleQuickFavorite(photo: GalleryPhoto) {
+    await toggleFavorite(photo.id, !photo.isFavorite);
+    router.refresh();
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
@@ -191,12 +226,13 @@ export function PhotoGrid({
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    Delete {selectedIds.size} photo
-                    {selectedIds.size === 1 ? "" : "s"}?
+                    Move {selectedIds.size} photo
+                    {selectedIds.size === 1 ? "" : "s"} to trash?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    This can't be undone. Deleted photos are also removed from
-                    any albums they're in.
+                    They'll disappear from your gallery and albums right away.
+                    You can restore them from Trash, or delete them permanently
+                    there.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -217,6 +253,15 @@ export function PhotoGrid({
               </AlertDialogContent>
             </AlertDialog>
           ) : null}
+
+          <Button
+            variant={favoritesOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => navigate({ favorites: !favoritesOnly, page: 1 })}
+          >
+            <Star className={cn("size-4", favoritesOnly && "fill-current")} />
+            Favorites
+          </Button>
 
           <Select
             value={sort}
@@ -241,14 +286,21 @@ export function PhotoGrid({
           const selected = selectedIds.has(photo.id);
 
           return (
-            <button
+            // biome-ignore lint/a11y/useSemanticElements: needs a nested real <button> for the favorite toggle, which a <button> wrapper can't contain
+            <div
               key={photo.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() =>
                 selectMode ? toggleSelected(photo.id) : setOpenIndex(index)
               }
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                selectMode ? toggleSelected(photo.id) : setOpenIndex(index);
+              }}
               className={cn(
-                "group relative aspect-square overflow-hidden rounded-lg border bg-muted text-left",
+                "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border bg-muted text-left",
                 selected
                   ? "border-primary ring-2 ring-primary"
                   : "border-border",
@@ -273,11 +325,38 @@ export function PhotoGrid({
                   <Check className="size-3.5" />
                 </span>
               ) : (
-                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  {new Date(photo.date).toLocaleDateString()}
-                </span>
+                <>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleQuickFavorite(photo);
+                    }}
+                    aria-label={
+                      photo.isFavorite
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                    }
+                    className={cn(
+                      "absolute right-2 top-2 rounded-full bg-black/40 p-1 text-white transition-opacity",
+                      photo.isFavorite
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100",
+                    )}
+                  >
+                    <Star
+                      className={cn(
+                        "size-4",
+                        photo.isFavorite && "fill-current text-yellow-400",
+                      )}
+                    />
+                  </button>
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    {new Date(photo.date).toLocaleDateString()}
+                  </span>
+                </>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -329,6 +408,42 @@ export function PhotoGrid({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
+              handleToggleFavoriteActive();
+            }}
+            disabled={isFavoriting}
+            className="absolute right-52 top-4 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label={
+              active.isFavorite ? "Remove from favorites" : "Add to favorites"
+            }
+            title={
+              active.isFavorite ? "Remove from favorites" : "Add to favorites"
+            }
+          >
+            <Star
+              className={cn(
+                "size-6",
+                active.isFavorite && "fill-current text-yellow-400",
+              )}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="absolute right-40 top-4 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label="Edit photo"
+            title="Edit photo"
+          >
+            <Pencil className="size-6" />
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
               handleLockActive();
             }}
             disabled={isLocking}
@@ -361,10 +476,11 @@ export function PhotoGrid({
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete this photo?</AlertDialogTitle>
+                <AlertDialogTitle>Move this photo to trash?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This can't be undone. It'll also be removed from any albums
-                  it's in.
+                  It'll disappear from your gallery and albums right away. You
+                  can restore it from Trash, or it stays there until you delete
+                  it permanently.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -426,6 +542,17 @@ export function PhotoGrid({
             <ChevronRight className="size-8" />
           </button>
         </div>
+      ) : null}
+
+      {active && isEditing ? (
+        <PhotoEditor
+          photo={active}
+          onClose={() => setIsEditing(false)}
+          onSaved={() => {
+            setIsEditing(false);
+            router.refresh();
+          }}
+        />
       ) : null}
     </div>
   );

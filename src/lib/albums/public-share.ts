@@ -1,7 +1,12 @@
+import { cache } from "react";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { toOne } from "~/lib/utils";
 
-const SIGNED_URL_TTL_SECONDS = 60 * 60;
+// A week, not an hour: these URLs back the page's Open Graph image too, and
+// a link-preview crawler (iMessage, WhatsApp, Slack, Twitter/X) may cache
+// and re-fetch it days after the link was first shared. The album is
+// already public by design, so the longer TTL adds no real exposure.
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export type SharedAlbumPhoto = {
   photoId: string;
@@ -21,7 +26,7 @@ export type SharedAlbum = {
  * for album data — it only ever returns something when share_enabled is
  * true, and only the fields a visitor should see (no owner info).
  */
-export async function getSharedAlbum(
+export const getSharedAlbum = cache(async function getSharedAlbum(
   shareToken: string,
 ): Promise<SharedAlbum | null> {
   const admin = createAdminClient();
@@ -74,4 +79,4 @@ export async function getSharedAlbum(
       };
     }),
   };
-}
+});

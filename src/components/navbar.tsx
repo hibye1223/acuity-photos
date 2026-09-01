@@ -1,7 +1,10 @@
+import { DollarSign, Lock } from "lucide-react";
 import Link from "next/link";
 import { signOut } from "~/app/actions/auth";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Button } from "~/components/ui/button";
+import { ADMIN_EMAIL } from "~/lib/admin";
+import { isPlan } from "~/lib/plans";
 import { createClient } from "~/lib/supabase/server";
 
 export async function Navbar() {
@@ -10,13 +13,19 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single()
-    : { data: null };
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  let isFreePlan = false;
+  let faceGroupingEnabled = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, face_grouping_enabled")
+      .eq("id", user.id)
+      .single();
+    isFreePlan = !isPlan(profile?.plan) || profile.plan === "free";
+    faceGroupingEnabled = profile?.face_grouping_enabled ?? false;
+  }
 
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -28,10 +37,7 @@ export async function Navbar() {
           {user ? (
             <>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/app">App</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm" data-tour="upload">
-                <Link href="/app/upload">Upload</Link>
+                <Link href="/app/create">Create</Link>
               </Button>
               <Button asChild variant="ghost" size="sm" data-tour="gallery">
                 <Link href="/app/photos">Gallery</Link>
@@ -39,11 +45,30 @@ export async function Navbar() {
               <Button asChild variant="ghost" size="sm" data-tour="albums">
                 <Link href="/app/albums">Albums</Link>
               </Button>
-              {profile?.is_admin ? (
+              {faceGroupingEnabled ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/app/people">People</Link>
+                </Button>
+              ) : null}
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                aria-label="Locked album"
+                title="Locked album"
+              >
+                <Link href="/app/locked">
+                  <Lock className="size-4" />
+                </Link>
+              </Button>
+              {isAdmin ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/app/admin">Admin</Link>
                 </Button>
               ) : null}
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/settings">Settings</Link>
+              </Button>
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out
@@ -60,6 +85,23 @@ export async function Navbar() {
               </Button>
             </>
           )}
+          {user && isFreePlan ? (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="text-primary"
+              aria-label="Upgrade to Pro"
+              title="Upgrade to Pro"
+            >
+              <Link href="/app/settings#plan">
+                <DollarSign
+                  className="size-5 animate-bounce [animation-duration:2s]"
+                  strokeWidth={2.75}
+                />
+              </Link>
+            </Button>
+          ) : null}
           <ThemeToggle />
         </div>
       </div>

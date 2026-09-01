@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/server";
+import { toOne } from "~/lib/utils";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
@@ -11,13 +12,25 @@ export default async function AlbumsPage() {
   const { data: albums, error } = await supabase
     .from("albums")
     .select(
-      "id, title, created_at, album_photos(photo_id, position, photos(storage_path))",
+      "id, title, created_at, album_photos(photo_id, position, photos(storage_path, deleted_at))",
     )
     .order("created_at", { ascending: false })
     .order("position", { referencedTable: "album_photos", ascending: true });
 
+  // A trashed photo disappears from its albums right away, without waiting
+  // for it to be purged.
+  const visiblePhotosByAlbum = new Map(
+    (albums ?? []).map((album) => [
+      album.id,
+      album.album_photos.filter((entry) => !toOne(entry.photos)?.deleted_at),
+    ]),
+  );
+
   const coverPaths = (albums ?? [])
-    .map((album) => album.album_photos[0]?.photos?.[0]?.storage_path)
+    .map(
+      (album) =>
+        toOne(visiblePhotosByAlbum.get(album.id)?.[0]?.photos)?.storage_path,
+    )
     .filter((path): path is string => !!path);
 
   const { data: signedUrls } = coverPaths.length
@@ -42,7 +55,7 @@ export default async function AlbumsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/app/albums/new">Build an album</Link>
+          <Link href="/app/create">Build an album</Link>
         </Button>
       </div>
 
@@ -54,13 +67,14 @@ export default async function AlbumsPage() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
           <p className="text-muted-foreground">No albums yet.</p>
           <Button asChild variant="outline">
-            <Link href="/app/albums/new">Build your first album</Link>
+            <Link href="/app/create">Build your first album</Link>
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {albums.map((album) => {
-            const coverPath = album.album_photos[0]?.photos?.[0]?.storage_path;
+            const visiblePhotos = visiblePhotosByAlbum.get(album.id) ?? [];
+            const coverPath = toOne(visiblePhotos[0]?.photos)?.storage_path;
             const coverUrl = coverPath ? urlByPath.get(coverPath) : undefined;
 
             return (
@@ -83,8 +97,8 @@ export default async function AlbumsPage() {
                 <div>
                   <p className="truncate text-sm font-medium">{album.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {album.album_photos.length} photo
-                    {album.album_photos.length === 1 ? "" : "s"}
+                    {visiblePhotos.length} photo
+                    {visiblePhotos.length === 1 ? "" : "s"}
                   </p>
                 </div>
               </Link>

@@ -37,8 +37,9 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-    // No production domain decided yet — set this in Vercel's env vars once
-    // one exists. Sitemap/OG image URLs fall back to localhost until then.
+    // Set in Vercel's Production/Preview env vars to
+    // https://www.acuityphotos.com. The localhost default only applies to
+    // local dev — don't let it silently mask a missing prod env var.
     NEXT_PUBLIC_SITE_URL: z.string().url().default("http://localhost:3000"),
   },
   runtimeEnv: {
